@@ -1,0 +1,40 @@
+plugins {
+    id 'java'
+    id "application"
+}
+
+group 'su.knrg.crypto'
+version '1.0-SNAPSHOT'
+mainClassName = 'su.knrg.crypto.Main'
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+    }
+}
+
+configurations {
+    include
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    include group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.70'
+
+    configurations.implementation.extendsFrom(configurations.include)
+}
+
+jar {
+    from(configurations.include.collect { it.isDirectory() ? it : zipTree(it) }) {
+        exclude 'META-INF', 'META-INF/**'
+    }
+
+    manifest {
+        attributes 'Main-Class': mainClassName
+    }
+}
