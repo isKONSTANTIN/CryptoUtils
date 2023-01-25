@@ -26,6 +26,9 @@ repositories {
 dependencies {
     include group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.70'
 
+    include group: 'com.google.zxing', name: 'core', version: '3.3.0'
+    include group: 'com.google.zxing', name: 'javase', version: '3.3.0'
+
     configurations.implementation.extendsFrom(configurations.include)
 }
 

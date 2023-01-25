@@ -79,6 +79,6 @@ public class SeedECDHECipherCommand extends Command {
 
     @Override
     public String args() {
-        return "<encrypt/decrypt> <base64 public ECDHE key> <base64 private ECDHE key> <base64 original/encrypted ECDHE entropy>";
+        return "<encrypt/decrypt> <public ECDHE key path> <private ECDHE key path> <base64 original/encrypted ECDHE entropy>";
     }
 }

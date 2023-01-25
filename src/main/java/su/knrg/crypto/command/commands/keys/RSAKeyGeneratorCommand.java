@@ -3,30 +3,37 @@ package su.knrg.crypto.command.commands.keys;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
+import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
 
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.util.Optional;
 
 public class RSAKeyGeneratorCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
-        return run();
+        Optional<String> publicPath = args.stringV(0);
+        Optional<String> privatePath = args.stringV(1);
+        Optional<Integer> size = args.intV(2);
+
+        if (publicPath.isEmpty() || privatePath.isEmpty())
+            return CommandResult.of("Some argument not set", true);
+
+        return run(publicPath.get(), privatePath.get(), size.orElse(2048));
     }
 
-    public CommandResult run() {
-        StringBuilder builder = new StringBuilder();
-
+    public CommandResult run(String publicPath, String privatePath, int size) {
         try {
-            KeyPair keyPair = SimpleRSA.generateKeyPair(2048);
+            KeyPair keyPair = SimpleRSA.generateKeyPair(size);
 
-            builder.append("Public key (base64): ").append(SimpleRSA.keyToBase64(keyPair.getPublic())).append("\n\n");
-            builder.append("Private key (base64): ").append(SimpleRSA.keyToBase64(keyPair.getPrivate())).append("\n");
-        } catch (NoSuchAlgorithmException e) {
+            SimpleFileWorker.of(publicPath).writeToFile(SimpleRSA.keyToBytes(keyPair.getPublic()));
+            SimpleFileWorker.of(privatePath).writeToFile(SimpleRSA.keyToBytes(keyPair.getPrivate()));
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
 
-        return CommandResult.of(builder.toString());
+        return CommandResult.of("Done!");
     }
 
     @Override
@@ -36,6 +43,6 @@ public class RSAKeyGeneratorCommand extends Command {
 
     @Override
     public String args() {
-        return null;
+        return "<public RSA key file path> <private RSA key file path> [keys size]";
     }
 }

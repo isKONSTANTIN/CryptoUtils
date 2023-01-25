@@ -27,19 +27,31 @@ public class SimpleECDHE {
     }
 
     public static String keyToBase64(Key key) {
-        return Base64.getEncoder().encodeToString(key.getEncoded());
+        return Base64.getEncoder().encodeToString(keyToBytes(key));
+    }
+
+    public static byte[] keyToBytes(Key key) {
+        return key.getEncoded();
     }
 
     public static PublicKey base64ToPublicKey(String text) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+        return getPublicKey(Base64.getDecoder().decode(text));
+    }
+
+    public static PrivateKey base64ToPrivateKey(String text) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+        return getPrivateKey(Base64.getDecoder().decode(text));
+    }
+
+    public static PublicKey getPublicKey(byte[] bytes) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
         KeyFactory keyFactory = KeyFactory.getInstance("ECDH", "BC");
-        EncodedKeySpec keySpec = new X509EncodedKeySpec(Base64.getDecoder().decode(text));
+        EncodedKeySpec keySpec = new X509EncodedKeySpec(bytes);
 
         return keyFactory.generatePublic(keySpec);
     }
 
-    public static PrivateKey base64ToPrivateKey(String text) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
+    public static PrivateKey getPrivateKey(byte[] bytes) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
         KeyFactory keyFactory = KeyFactory.getInstance("ECDH", "BC");
-        EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(Base64.getDecoder().decode(text));
+        EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(bytes);
 
         return keyFactory.generatePrivate(keySpec);
     }

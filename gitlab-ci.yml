@@ -1,0 +1,15 @@
+stages:
+  - build
+
+build:
+  stage: build
+  image: gradle:jdk11-alpine
+
+  script:
+    - gradle build
+    - cp build/libs/*.jar ./
+
+  artifacts:
+    paths:
+      - *.jar
+    expire_in: 30 day

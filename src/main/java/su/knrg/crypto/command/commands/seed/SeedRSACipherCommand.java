@@ -3,11 +3,13 @@ package su.knrg.crypto.command.commands.seed;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
+import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import java.io.IOException;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
@@ -17,8 +19,8 @@ public class SeedRSACipherCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
         Optional<String> oMode = args.stringV(0);
-        Optional<String> oKey = args.stringV(1);
-        Optional<String> oEntropy = args.stringV(2);
+        Optional<String> oEntropy = args.stringV(1);
+        Optional<String> oKey = args.stringV(2);
 
         if (oMode.isEmpty() || oKey.isEmpty() || oEntropy.isEmpty())
             return CommandResult.of("Some argument not set", true);
@@ -26,14 +28,21 @@ public class SeedRSACipherCommand extends Command {
         if (!(oMode.get().equals("encrypt") || oMode.get().equals("decrypt")))
             return CommandResult.of("Mode must be 'encrypt' or 'decrypt'", true);
 
-        return run(oMode.get().equals("encrypt"), oKey.get(), Base64.getDecoder().decode(oEntropy.get()));
+        byte[] key;
+        try {
+            key = SimpleFileWorker.of(oKey.get()).readBytesFromFile();
+        } catch (Exception e) {
+            return CommandResult.of("Failed to read key from file!", true);
+        }
+
+        return run(oMode.get().equals("encrypt"), key, Base64.getDecoder().decode(oEntropy.get()));
     }
 
-    public CommandResult run(boolean mode, String base64Key, byte[] entropy) {
+    public CommandResult run(boolean mode, byte[] bytesKey, byte[] entropy) {
         Key key = null;
 
         try {
-            key = mode ? SimpleRSA.base64ToPublicKey(base64Key) : SimpleRSA.base64ToPrivateKey(base64Key);
+            key = mode ? SimpleRSA.getPublicKey(bytesKey) : SimpleRSA.getPrivateKey(bytesKey);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
             return CommandResult.of("Key not valid", true);
@@ -61,6 +70,6 @@ public class SeedRSACipherCommand extends Command {
 
     @Override
     public String args() {
-        return "<encrypt/decrypt> <base64 public/private RSA key> <base64 original/encrypted RSA entropy>";
+        return "<encrypt/decrypt> <base64 original/encrypted RSA entropy> <public/private RSA key path>";
     }
 }

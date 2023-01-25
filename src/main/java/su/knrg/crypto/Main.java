@@ -5,6 +5,7 @@ import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.commands.*;
 import su.knrg.crypto.command.commands.keys.ECDHEKeyGeneratorCommand;
 import su.knrg.crypto.command.commands.keys.RSAKeyGeneratorCommand;
+import su.knrg.crypto.command.commands.qr.QRCodeCommand;
 import su.knrg.crypto.command.commands.seed.SeedECDHECipherCommand;
 import su.knrg.crypto.command.commands.seed.SeedGeneratorCommand;
 import su.knrg.crypto.command.commands.seed.SeedRSACipherCommand;
@@ -23,6 +24,7 @@ public class Main {
         handler.registerCommand("ecdhe_key", new ECDHEKeyGeneratorCommand());
         handler.registerCommand("seed_rsa_cipher", new SeedRSACipherCommand());
         handler.registerCommand("seed_ecdhe_cipher", new SeedECDHECipherCommand());
+        handler.registerCommand("qr", new QRCodeCommand());
     }
 
     public static void shutdown() {
@@ -37,7 +39,7 @@ public class Main {
         (preResult.error ? System.err : System.out).println(preResult.message);
 
         while (run) {
-            System.out.print("> ");
+            System.out.print("cu> ");
             String line = scanner.nextLine();
 
             CommandResult result = handler.run(line);
