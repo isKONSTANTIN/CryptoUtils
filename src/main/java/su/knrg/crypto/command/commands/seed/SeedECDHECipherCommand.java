@@ -3,6 +3,7 @@ package su.knrg.crypto.command.commands.seed;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
+import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
 import su.knrg.crypto.utils.SimpleRSA;
 
@@ -80,5 +81,10 @@ public class SeedECDHECipherCommand extends Command {
     @Override
     public String args() {
         return "<encrypt/decrypt> <public ECDHE key path> <private ECDHE key path> <base64 original/encrypted ECDHE entropy>";
+    }
+
+    @Override
+    public CommandTag tag() {
+        return CommandTag.CRYPTOCURRENCIES;
     }
 }

@@ -3,6 +3,7 @@ package su.knrg.crypto.command.commands.keys;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
+import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
 
@@ -44,5 +45,10 @@ public class RSAKeyGeneratorCommand extends Command {
     @Override
     public String args() {
         return "<public RSA key file path> <private RSA key file path> [keys size]";
+    }
+
+    @Override
+    public CommandTag tag() {
+        return CommandTag.CRYPTOGRAPHY;
     }
 }

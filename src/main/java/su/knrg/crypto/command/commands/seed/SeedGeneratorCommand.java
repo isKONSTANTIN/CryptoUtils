@@ -3,6 +3,7 @@ package su.knrg.crypto.command.commands.seed;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.Command;
+import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.MnemonicGenerator;
 
 import java.security.NoSuchAlgorithmException;
@@ -101,5 +102,10 @@ public class SeedGeneratorCommand extends Command {
     @Override
     public String args() {
         return "[base64 string]";
+    }
+
+    @Override
+    public CommandTag tag() {
+        return CommandTag.CRYPTOCURRENCIES;
     }
 }

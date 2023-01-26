@@ -29,6 +29,8 @@ dependencies {
     include group: 'com.google.zxing', name: 'core', version: '3.3.0'
     include group: 'com.google.zxing', name: 'javase', version: '3.3.0'
 
+    include group: 'com.codahale', name: 'shamir', version: '0.7.0'
+
     configurations.implementation.extendsFrom(configurations.include)
 }
 

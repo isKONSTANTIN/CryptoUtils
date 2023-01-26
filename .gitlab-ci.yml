@@ -11,5 +11,5 @@ build:
 
   artifacts:
     paths:
-      - *.jar
+      - ./*.jar
     expire_in: 30 day

@@ -1,13 +1,14 @@
 package su.knrg.crypto.command;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import com.beust.jcommander.internal.Maps;
+import su.knrg.crypto.command.commands.CommandTag;
+
+import java.util.*;
 
 public class CommandHandler {
     protected HashMap<String, Command> commands = new HashMap<>();
     protected ArrayList<String> commandsNames = new ArrayList<>();
+    protected LinkedHashMap<CommandTag, ArrayList<String>> commandsNamesByTag = new LinkedHashMap<>();
 
     public CommandResult run(String line) {
         String[] words = line.split(" ");
@@ -28,33 +29,34 @@ public class CommandHandler {
 
         commands.put(alias, command);
         commandsNames.add(alias);
+        addToTagMap(command.tag(), alias);
 
         return true;
+    }
+
+    protected void addToTagMap(CommandTag tag, String alias) {
+        addTagManually(tag);
+        commandsNamesByTag.get(tag).add(alias);
+    }
+
+    public void addTagManually(CommandTag tag) {
+        if (!commandsNamesByTag.containsKey(tag))
+            commandsNamesByTag.put(tag, new ArrayList<>());
     }
 
     public <T extends Command> T getCommand(String alias, Class<T> tClass) {
         return (T) commands.get(alias);
     }
 
-    public String helpPage() {
-        StringBuilder builder = new StringBuilder();
+    public Map<String, Command> getCommands() {
+        return Collections.unmodifiableMap(commands);
+    }
 
-        for (String alias : commandsNames) {
-            Command command = commands.get(alias);
-            String args = command.args();
-            String desc = command.description();
+    public List<String> getCommandsNames() {
+        return Collections.unmodifiableList(commandsNames);
+    }
 
-            builder.append(alias);
-
-            if (args != null)
-                builder.append(" ").append(args);
-
-            builder.append(" - ")
-                    .append(desc)
-                    .append("\n");
-        }
-
-
-        return builder.toString();
+    public Map<CommandTag, List<String>> getCommandsNamesByTag() {
+        return Collections.unmodifiableMap(commandsNamesByTag);
     }
 }

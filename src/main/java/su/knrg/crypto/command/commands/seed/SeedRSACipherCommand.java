@@ -3,6 +3,7 @@ package su.knrg.crypto.command.commands.seed;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
+import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
 
@@ -71,5 +72,10 @@ public class SeedRSACipherCommand extends Command {
     @Override
     public String args() {
         return "<encrypt/decrypt> <base64 original/encrypted RSA entropy> <public/private RSA key path>";
+    }
+
+    @Override
+    public CommandTag tag() {
+        return CommandTag.CRYPTOCURRENCIES;
     }
 }

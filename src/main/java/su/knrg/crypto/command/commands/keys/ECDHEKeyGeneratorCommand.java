@@ -3,6 +3,7 @@ package su.knrg.crypto.command.commands.keys;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
+import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
 import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
@@ -46,5 +47,10 @@ public class ECDHEKeyGeneratorCommand extends Command {
     @Override
     public String args() {
         return "<public ECDHE key file path> <private ECDHE key file path>";
+    }
+
+    @Override
+    public CommandTag tag() {
+        return CommandTag.CRYPTOGRAPHY;
     }
 }
