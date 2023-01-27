@@ -1,6 +1,7 @@
 package su.knrg.crypto.command.commands.qr;
 
 import com.google.zxing.BarcodeFormat;
+import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -15,7 +16,7 @@ public class ErrorCorrectionLevelsCommand extends Command {
 
         builder.append("All correction levels formats:").append('\n');
 
-        Arrays.stream(BarcodeFormat.values())
+        Arrays.stream(ErrorCorrectionLevel.values())
                 .map(v -> v.name().toLowerCase())
                 .forEach(s -> builder.append(s).append('\n'));
 

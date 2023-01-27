@@ -15,11 +15,12 @@ import su.knrg.crypto.command.commands.shamir.ShamirCommand;
 import su.knrg.crypto.utils.codes.SimplePDF417Worker;
 import su.knrg.crypto.utils.codes.SimpleQRCodeWorker;
 
+import java.io.IOException;
 import java.util.Scanner;
 
 public class Main {
     protected CommandHandler handler = new CommandHandler();
-    protected static boolean run = true;
+    protected static TerminalWorker terminalWorker;
 
     Main() {
         handler.addTagManually(CommandTag.MISC);
@@ -40,26 +41,29 @@ public class Main {
         handler.registerCommand("shamir", new ShamirCommand());
         handler.registerCommand("hex", new HexCommand());
 
+        terminalWorker = new TerminalWorker(handler);
     }
 
     public static void shutdown() {
-        run = false;
+        terminalWorker.stop();
     }
 
     void start() {
-        Scanner scanner = new Scanner(System.in);
+        try {
+            terminalWorker.start();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        CommandResult preResult = handler.run("help");
+        //CommandResult preResult = handler.run("help");
 
-        (preResult.error ? System.err : System.out).println(preResult.message);
+        //(preResult.error ? System.err : System.out).println(preResult.message);
 
-        while (run) {
-            System.out.print("cu> ");
-            String line = scanner.nextLine();
-
-            CommandResult result = handler.run(line);
-
-            System.out.println(result.message);
+        try {
+            terminalWorker.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+            return;
         }
     }
 

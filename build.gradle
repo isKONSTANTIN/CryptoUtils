@@ -30,13 +30,18 @@ dependencies {
     include group: 'com.google.zxing', name: 'javase', version: '3.3.0'
 
     include group: 'com.codahale', name: 'shamir', version: '0.7.0'
+    include group: 'org.jline', name: 'jline', version: '3.22.0'
+    include group: 'org.jline', name: 'jline-terminal-jansi', version: '3.22.0'
+    include group: 'org.jline', name: 'jline-reader', version: '3.22.0'
 
     configurations.implementation.extendsFrom(configurations.include)
 }
 
 jar {
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
     from(configurations.include.collect { it.isDirectory() ? it : zipTree(it) }) {
-        exclude 'META-INF', 'META-INF/**'
+        exclude 'META-INF/BC**'
     }
 
     manifest {

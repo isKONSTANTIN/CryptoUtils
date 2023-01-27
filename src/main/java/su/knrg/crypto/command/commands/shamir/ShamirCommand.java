@@ -1,6 +1,7 @@
 package su.knrg.crypto.command.commands.shamir;
 
 import com.codahale.shamir.Scheme;
+import org.jline.builtins.Completers;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -16,6 +17,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+
+import static org.jline.builtins.Completers.TreeCompleter.node;
 
 public class ShamirCommand extends Command {
     @Override

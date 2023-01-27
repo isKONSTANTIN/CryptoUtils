@@ -1,5 +1,6 @@
 package su.knrg.crypto.command;
 
+import org.jline.builtins.Completers.TreeCompleter.Node;
 import su.knrg.crypto.command.commands.CommandTag;
 
 public abstract class Command {
@@ -13,6 +14,10 @@ public abstract class Command {
 
     public abstract String description();
     public abstract String args();
+
+    public Node getArgsTree() {
+        return null;
+    }
 
     public CommandTag tag() {
         return CommandTag.MISC;
