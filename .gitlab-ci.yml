@@ -3,7 +3,7 @@ stages:
 
 build:
   stage: build
-  image: gradle:jdk11-alpine
+  image: gradle:jdk17-alpine
 
   script:
     - gradle build
