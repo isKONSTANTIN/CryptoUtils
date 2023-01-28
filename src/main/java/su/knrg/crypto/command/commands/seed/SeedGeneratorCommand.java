@@ -64,7 +64,7 @@ public class SeedGeneratorCommand extends Command {
         return CommandResult.VOID;
     }
 
-    protected void printSeed(String[] words) {
+    public static void printSeed(String[] words) {
         StringBuilder list = new StringBuilder();
         StringBuilder line = new StringBuilder();
 
@@ -83,7 +83,7 @@ public class SeedGeneratorCommand extends Command {
         System.out.println(line);
     }
 
-    protected void printBits(byte[] bytes, int gap) {
+    public static void printBits(byte[] bytes, int gap) {
         int i = 1;
 
         for (byte b : bytes) {

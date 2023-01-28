@@ -12,6 +12,7 @@ import su.knrg.crypto.command.commands.qr.ErrorCorrectionLevelsCommand;
 import su.knrg.crypto.command.commands.seed.SeedECDHECipherCommand;
 import su.knrg.crypto.command.commands.seed.SeedGeneratorCommand;
 import su.knrg.crypto.command.commands.seed.SeedRSACipherCommand;
+import su.knrg.crypto.command.commands.seed.SeedToBaseCommand;
 import su.knrg.crypto.command.commands.shamir.ShamirCommand;
 import su.knrg.crypto.utils.codes.SimplePDF417Worker;
 import su.knrg.crypto.utils.codes.SimpleQRCodeWorker;
@@ -30,7 +31,9 @@ public class Main {
 
         handler.registerCommand("help", new HelpCommand());
         handler.registerCommand("exit", new ExitCommand());
+        handler.registerCommand("q", new ExitCommand());
         handler.registerCommand("seed", new SeedGeneratorCommand());
+        handler.registerCommand("seed_to_base", new SeedToBaseCommand());
         handler.registerCommand("rsa_key", new RSAKeyGeneratorCommand());
         handler.registerCommand("ecdhe_key", new ECDHEKeyGeneratorCommand());
         handler.registerCommand("seed_rsa_cipher", new SeedRSACipherCommand());
@@ -54,10 +57,6 @@ public class Main {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        //CommandResult preResult = handler.run("help");
-
-        //(preResult.error ? System.err : System.out).println(preResult.message);
 
         try {
             terminalWorker.start();

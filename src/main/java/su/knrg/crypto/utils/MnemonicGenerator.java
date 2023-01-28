@@ -3,6 +3,7 @@ package su.knrg.crypto.utils;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.BitSet;
 
 public class MnemonicGenerator {
     protected static int next11Bits(byte[] bytes, int offset) {
@@ -13,6 +14,47 @@ public class MnemonicGenerator {
                 (lowerBitsToRemove < 8
                         ? ((int) bytes[skip + 2] & 0xff)
                         : 0)) >> lowerBitsToRemove & (1 << 11) - 1;
+    }
+
+    public static byte[] fromMnemonic(String[] words) {
+        int wordI = 0;
+        BitSet bits = new BitSet();
+
+        for (String word : words) {
+            int index = BIP39.MAP.get(word);
+
+            for (int k = 0; k < 11; k++) {
+                int bitInSet = (11 * wordI) + k;
+                bits.set(bitInSet, isBitSet(index, 10 - k));
+            }
+            wordI++;
+        }
+
+        byte[] result = new byte[32];
+        int i = 0;
+        for (byte b : bits.toByteArray()) {
+            if (i == 32)
+                break;
+
+            result[i] = reverseBits(b);
+            i++;
+        }
+
+        return result;
+    }
+
+    protected static byte reverseBits(byte x) {
+        byte b = 0;
+        for (int i = 0; i < 8; ++i) {
+            b<<=1;
+            b|=( x &1);
+            x>>=1;
+        }
+        return b;
+    }
+
+    private static boolean isBitSet(int n, int k) {
+        return ((n >> k) & 1) == 1;
     }
 
     public static String[] createMnemonic(byte[] entropy) throws NoSuchAlgorithmException {

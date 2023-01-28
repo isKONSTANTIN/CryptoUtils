@@ -5,6 +5,8 @@ import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 
 public class ArgsTreeBuilder {
@@ -23,6 +25,16 @@ public class ArgsTreeBuilder {
 
     protected ArgsTreeBuilder(ArgsTreeBuilder parent) {
         this.parent = parent;
+    }
+
+    public ArgsTreeBuilder addPossibleArgs(String ... args) {
+        return addPossibleArgs(List.of(args));
+    }
+
+    public ArgsTreeBuilder addPossibleArgs(Collection<String> args) {
+        args.forEach(this::addPossibleArg);
+
+        return this;
     }
 
     public ArgsTreeBuilder addPossibleArg(String arg) {
