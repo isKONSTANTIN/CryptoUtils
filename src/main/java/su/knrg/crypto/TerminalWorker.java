@@ -50,7 +50,7 @@ public class TerminalWorker {
     }
 
     public void start() throws IOException {
-        Logger.getLogger("org.jline").setLevel(Level.ALL);
+        //Logger.getLogger("org.jline").setLevel(Level.ALL);
 
         terminal = TerminalBuilder.builder()
                 .jansi(true)
@@ -61,6 +61,8 @@ public class TerminalWorker {
                 .build();
 
         writer = terminal.writer();
+
+        writer.println(handler.run("help").message);
 
         while (run) {
             String line;
