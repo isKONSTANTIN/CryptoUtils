@@ -1,12 +1,15 @@
 package su.knrg.crypto.command.commands.hex;
 
+import org.jline.builtins.Completers;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleFileWorker;
+import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Optional;
 
 public class HexCommand extends Command {
@@ -19,8 +22,8 @@ public class HexCommand extends Command {
         if (oMode.isEmpty())
             return CommandResult.of("Mode not set", true);
 
-        if (!(oMode.get().equals("from") || oMode.get().equals("to")))
-            return CommandResult.of("Mode must be 'from' or 'to'", true);
+        if (!(oMode.get().equals("encode") || oMode.get().equals("decode")))
+            return CommandResult.of("Mode must be 'encode' or 'decode'", true);
 
         Optional<String> oSource = args.stringV(1);
 
@@ -32,7 +35,7 @@ public class HexCommand extends Command {
         if (oResult.isEmpty())
             return CommandResult.of("Result path not set", true);
 
-        boolean mode = oMode.map((s) -> s.equals("to")).get();
+        boolean mode = oMode.map((s) -> s.equals("encode")).get();
 
         if (mode) {
             byte[] bytes;
@@ -102,7 +105,29 @@ public class HexCommand extends Command {
 
     @Override
     public String args() {
-        return "<from/to> <source path> <result path>";
+        return "<encode/decode> <source path> <result path>";
+    }
+
+    @Override
+    public Completers.TreeCompleter.Node getArgsTree(String alias) {
+        return ArgsTreeBuilder.builder().addPossibleArg(alias)
+                .subTree().addPossibleArg("encode")
+
+                .recursiveSubTree()
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .parent()
+
+                .parent()
+
+                .subTree().addPossibleArg("decode")
+                .recursiveSubTree()
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .parent()
+                .parent()
+
+                .build();
     }
 
     @Override

@@ -12,6 +12,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -39,20 +41,16 @@ public class TerminalWorker {
         ArrayList<TreeCompleter.Node> nodes = new ArrayList<>();
 
         handler.getCommands().forEach((n, c) -> {
-            TreeCompleter.Node commandNode = c.getArgsTree();
+            Optional<TreeCompleter.Node> commandNode = Optional.ofNullable(c.getArgsTree(n));
 
-            if (commandNode != null){
-                nodes.add(node(n, commandNode));
-            }else {
-                nodes.add(node(n));
-            }
+            nodes.add(commandNode.orElseGet(() -> node(n)));
         });
 
         return new TreeCompleter(nodes);
     }
 
     public void start() throws IOException {
-        //Logger.getLogger("org.jline").setLevel(Level.ALL);
+        Logger.getLogger("org.jline").setLevel(Level.ALL);
 
         terminal = TerminalBuilder.builder()
                 .jansi(true)

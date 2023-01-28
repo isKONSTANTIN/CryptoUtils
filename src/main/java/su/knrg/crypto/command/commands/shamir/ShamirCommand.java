@@ -6,19 +6,14 @@ import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
-import su.knrg.crypto.utils.SimpleECDHE;
 import su.knrg.crypto.utils.SimpleFileWorker;
+import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.KeyPair;
+import java.nio.file.Path;
 import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
-
-import static org.jline.builtins.Completers.TreeCompleter.node;
+import java.util.*;
 
 public class ShamirCommand extends Command {
     @Override
@@ -118,6 +113,26 @@ public class ShamirCommand extends Command {
     @Override
     public String args() {
         return "split <all parts> <parts for recover> <path> | join <result path> <part 1 | null> <part 2 | null> <part 3 | null> ...";
+    }
+
+    @Override
+    public Completers.TreeCompleter.Node getArgsTree(String alias) {
+        return ArgsTreeBuilder.builder().addPossibleArg(alias)
+                .subTree().addPossibleArg("split")
+
+                .recursiveSubTree()
+                .addTip("<all parts>", "Number of all parts")
+                .addTip("<parts for recover>", "Number of required parts for recover")
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .parent()
+
+                .parent()
+
+                .subTree().addPossibleArg("join")
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .parent()
+
+                .build();
     }
 
     @Override

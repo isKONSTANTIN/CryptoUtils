@@ -1,11 +1,14 @@
 package su.knrg.crypto.command.commands.seed;
 
+import org.jline.builtins.Completers;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.MnemonicGenerator;
+import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
+import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
@@ -102,6 +105,14 @@ public class SeedGeneratorCommand extends Command {
     @Override
     public String args() {
         return "[base64 string]";
+    }
+
+    @Override
+    public Completers.TreeCompleter.Node getArgsTree(String alias) {
+        return ArgsTreeBuilder.builder().addPossibleArg(alias)
+                .addTip("[base64 string]", "Seed bytes in base64")
+
+                .build();
     }
 
     @Override

@@ -1,5 +1,6 @@
 package su.knrg.crypto.command.commands.keys;
 
+import org.jline.builtins.Completers;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -7,7 +8,9 @@ import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
 import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
+import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
+import java.nio.file.Path;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
@@ -47,6 +50,16 @@ public class ECDHEKeyGeneratorCommand extends Command {
     @Override
     public String args() {
         return "<public ECDHE key file path> <private ECDHE key file path>";
+    }
+
+    @Override
+    public Completers.TreeCompleter.Node getArgsTree(String alias) {
+        return ArgsTreeBuilder.builder().addPossibleArg(alias)
+                .recursiveSubTree()
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .parent()
+                .build();
     }
 
     @Override

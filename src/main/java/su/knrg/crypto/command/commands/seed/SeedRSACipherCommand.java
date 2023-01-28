@@ -1,16 +1,19 @@
 package su.knrg.crypto.command.commands.seed;
 
+import org.jline.builtins.Completers;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
+import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
@@ -72,6 +75,30 @@ public class SeedRSACipherCommand extends Command {
     @Override
     public String args() {
         return "<encrypt/decrypt> <base64 original/encrypted RSA entropy> <public/private RSA key path>";
+    }
+
+    @Override
+    public Completers.TreeCompleter.Node getArgsTree(String alias) {
+        return ArgsTreeBuilder.builder().addPossibleArg(alias)
+                .subTree().addPossibleArg("encrypt")
+
+                .recursiveSubTree()
+                .addTip("<base64 original entropy>", "Seed entropy")
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .parent()
+
+                .parent()
+
+                .subTree().addPossibleArg("decrypt")
+
+                .recursiveSubTree()
+                .addTip("<base64 encrypted RSA entropy>", "RSA seed entropy")
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .parent()
+
+                .parent()
+
+                .build();
     }
 
     @Override

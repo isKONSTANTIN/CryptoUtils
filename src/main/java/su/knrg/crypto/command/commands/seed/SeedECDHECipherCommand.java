@@ -1,13 +1,16 @@
 package su.knrg.crypto.command.commands.seed;
 
+import org.jline.builtins.Completers;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
 import su.knrg.crypto.utils.SimpleRSA;
+import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import javax.crypto.*;
+import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
@@ -81,6 +84,32 @@ public class SeedECDHECipherCommand extends Command {
     @Override
     public String args() {
         return "<encrypt/decrypt> <public ECDHE key path> <private ECDHE key path> <base64 original/encrypted ECDHE entropy>";
+    }
+
+    @Override
+    public Completers.TreeCompleter.Node getArgsTree(String alias) {
+        return ArgsTreeBuilder.builder().addPossibleArg(alias)
+                .subTree().addPossibleArg("encrypt")
+
+                .recursiveSubTree()
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addTip("<base64 original entropy>", "Seed entropy")
+                .parent()
+
+                .parent()
+
+                .subTree().addPossibleArg("decrypt")
+
+                .recursiveSubTree()
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addTip("<base64 encrypted ECDHE entropy>", "Encrypted ECDHE seed entropy")
+                .parent()
+
+                .parent()
+
+                .build();
     }
 
     @Override
