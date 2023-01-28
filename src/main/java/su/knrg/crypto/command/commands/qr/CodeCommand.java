@@ -10,7 +10,6 @@ import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 import su.knrg.crypto.utils.codes.AbstractCodeWorker;
-import su.knrg.crypto.utils.codes.SimpleQRCodeWorker;
 
 import java.io.IOException;
 import java.nio.file.Path;

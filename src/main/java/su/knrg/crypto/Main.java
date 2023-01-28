@@ -1,8 +1,9 @@
 package su.knrg.crypto;
 
 import su.knrg.crypto.command.CommandHandler;
-import su.knrg.crypto.command.CommandResult;
-import su.knrg.crypto.command.commands.*;
+import su.knrg.crypto.command.commands.CommandTag;
+import su.knrg.crypto.command.commands.ExitCommand;
+import su.knrg.crypto.command.commands.HelpCommand;
 import su.knrg.crypto.command.commands.hex.HexCommand;
 import su.knrg.crypto.command.commands.keys.ECDHEKeyGeneratorCommand;
 import su.knrg.crypto.command.commands.keys.RSAKeyGeneratorCommand;
@@ -16,7 +17,6 @@ import su.knrg.crypto.utils.codes.SimplePDF417Worker;
 import su.knrg.crypto.utils.codes.SimpleQRCodeWorker;
 
 import java.io.IOException;
-import java.util.Scanner;
 
 public class Main {
     protected CommandHandler handler = new CommandHandler();

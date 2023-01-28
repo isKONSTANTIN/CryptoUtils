@@ -6,7 +6,6 @@ import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
-import su.knrg.crypto.utils.SimpleRSA;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import javax.crypto.*;

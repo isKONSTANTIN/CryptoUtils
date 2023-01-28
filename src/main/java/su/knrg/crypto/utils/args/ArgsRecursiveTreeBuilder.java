@@ -1,15 +1,8 @@
 package su.knrg.crypto.utils.args;
 
-import org.jline.builtins.Completers;
 import org.jline.builtins.Completers.TreeCompleter.Node;
-import org.jline.reader.Candidate;
-import org.jline.reader.Completer;
-import org.jline.reader.LineReader;
-import org.jline.reader.ParsedLine;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 
 import static org.jline.builtins.Completers.TreeCompleter.node;
 

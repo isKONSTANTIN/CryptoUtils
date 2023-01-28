@@ -10,14 +10,10 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
-import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.EnumMap;
-import java.util.HashMap;
 import java.util.Map;
 
 public class SimpleQRCodeWorker extends AbstractCodeWorker{

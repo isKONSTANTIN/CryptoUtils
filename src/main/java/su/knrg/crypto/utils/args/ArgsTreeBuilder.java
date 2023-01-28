@@ -4,7 +4,8 @@ import org.jline.builtins.Completers;
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ArgsTreeBuilder {
 

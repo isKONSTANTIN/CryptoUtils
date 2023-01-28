@@ -11,7 +11,6 @@ import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import java.nio.file.Path;
 import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
 import java.util.Optional;
 
 public class RSAKeyGeneratorCommand extends Command {

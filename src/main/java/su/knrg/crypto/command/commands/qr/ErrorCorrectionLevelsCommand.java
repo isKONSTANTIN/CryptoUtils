@@ -1,6 +1,5 @@
 package su.knrg.crypto.command.commands.qr;
 
-import com.google.zxing.BarcodeFormat;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;

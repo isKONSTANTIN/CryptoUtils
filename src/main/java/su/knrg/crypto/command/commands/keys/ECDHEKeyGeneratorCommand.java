@@ -7,14 +7,10 @@ import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
 import su.knrg.crypto.utils.SimpleFileWorker;
-import su.knrg.crypto.utils.SimpleRSA;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import java.nio.file.Path;
-import java.security.InvalidAlgorithmParameterException;
 import java.security.KeyPair;
-import java.security.NoSuchAlgorithmException;
-import java.security.NoSuchProviderException;
 import java.util.Optional;
 
 public class ECDHEKeyGeneratorCommand extends Command {

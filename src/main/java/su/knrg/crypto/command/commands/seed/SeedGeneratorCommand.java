@@ -1,14 +1,13 @@
 package su.knrg.crypto.command.commands.seed;
 
 import org.jline.builtins.Completers;
+import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
-import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.MnemonicGenerator;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
-import java.nio.file.Path;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Arrays;
