@@ -2,8 +2,9 @@ package su.knrg.crypto;
 
 import su.knrg.crypto.command.CommandHandler;
 import su.knrg.crypto.command.commands.CommandTag;
-import su.knrg.crypto.command.commands.ExitCommand;
-import su.knrg.crypto.command.commands.HelpCommand;
+import su.knrg.crypto.command.commands.misc.ChangeDirectoryCommand;
+import su.knrg.crypto.command.commands.misc.ExitCommand;
+import su.knrg.crypto.command.commands.misc.HelpCommand;
 import su.knrg.crypto.command.commands.hex.HexCommand;
 import su.knrg.crypto.command.commands.keys.ECDHEKeyGeneratorCommand;
 import su.knrg.crypto.command.commands.keys.RSAKeyGeneratorCommand;
@@ -18,11 +19,12 @@ import su.knrg.crypto.utils.codes.SimplePDF417Worker;
 import su.knrg.crypto.utils.codes.SimpleQRCodeWorker;
 
 import java.io.IOException;
+import java.nio.file.Path;
 
 public class Main {
     protected CommandHandler handler = new CommandHandler();
     protected static TerminalWorker terminalWorker;
-
+    protected static Path currentPath = Path.of("./").toAbsolutePath();
     Main() {
         handler.addTagManually(CommandTag.MISC);
         handler.addTagManually(CommandTag.CRYPTOCURRENCIES);
@@ -31,7 +33,9 @@ public class Main {
 
         handler.registerCommand("help", new HelpCommand());
         handler.registerCommand("exit", new ExitCommand());
+        handler.registerCommand("cd", new ChangeDirectoryCommand());
         handler.registerCommand("q", new ExitCommand());
+
         handler.registerCommand("seed", new SeedGeneratorCommand());
         handler.registerCommand("seed_to_base", new SeedToBaseCommand());
         handler.registerCommand("rsa_key", new RSAKeyGeneratorCommand());
@@ -51,6 +55,18 @@ public class Main {
         terminalWorker.stop();
     }
 
+    public static Path getCurrentPath() {
+        return currentPath;
+    }
+
+    public static void changeCurrentPath(String add) {
+        Path newPath = currentPath.resolve(add);
+        if (!newPath.toFile().exists())
+            return;
+
+        currentPath = newPath;
+    }
+
     void start() {
         try {
             terminalWorker.start();
@@ -62,7 +78,6 @@ public class Main {
             terminalWorker.start();
         } catch (IOException e) {
             e.printStackTrace();
-            return;
         }
     }
 

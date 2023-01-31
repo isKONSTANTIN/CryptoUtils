@@ -1,6 +1,7 @@
 package su.knrg.crypto.command.commands.keys;
 
 import org.jline.builtins.Completers;
+import su.knrg.crypto.Main;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -16,8 +17,8 @@ import java.util.Optional;
 public class RSAKeyGeneratorCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
-        Optional<String> publicPath = args.stringV(0);
-        Optional<String> privatePath = args.stringV(1);
+        Optional<String> publicPath = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p).toString());
+        Optional<String> privatePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
         Optional<Integer> size = args.intV(2);
 
         if (publicPath.isEmpty() || privatePath.isEmpty())
@@ -53,8 +54,8 @@ public class RSAKeyGeneratorCommand extends Command {
     public Completers.TreeCompleter.Node getArgsTree(String alias) {
         return ArgsTreeBuilder.builder().addPossibleArg(alias)
                 .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .addTip("[keys size]", "Key size in bits")
                 .parent()
                 .build();

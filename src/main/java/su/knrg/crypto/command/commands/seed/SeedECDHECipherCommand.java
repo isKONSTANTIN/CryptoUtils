@@ -1,11 +1,13 @@
 package su.knrg.crypto.command.commands.seed;
 
 import org.jline.builtins.Completers;
+import su.knrg.crypto.Main;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
+import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import javax.crypto.*;
@@ -29,23 +31,37 @@ public class SeedECDHECipherCommand extends Command {
         if (!(oMode.get().equals("encrypt") || oMode.get().equals("decrypt")))
             return CommandResult.of("Mode must be 'encrypt' or 'decrypt'", true);
 
-        return run(oMode.get().equals("encrypt"), oPublicKey.get(), oPrivateKey.get(), Base64.getDecoder().decode(oEntropy.get()));
+        byte[] pubKey;
+        try {
+            pubKey = SimpleFileWorker.of(oPublicKey.get()).readBytesFromFile();
+        } catch (Exception e) {
+            return CommandResult.of("Failed to read public key from file!", true);
+        }
+
+        byte[] secKey;
+        try {
+            secKey = SimpleFileWorker.of(oPrivateKey.get()).readBytesFromFile();
+        } catch (Exception e) {
+            return CommandResult.of("Failed to read private key from file!", true);
+        }
+
+        return run(oMode.get().equals("encrypt"), pubKey, secKey, Base64.getDecoder().decode(oEntropy.get()));
     }
 
-    public CommandResult run(boolean mode, String base64PublicKey, String base64PrivateKey, byte[] entropy) {
+    public CommandResult run(boolean mode, byte[] publicKeyBytes, byte[] privateKeyBytes, byte[] entropy) {
         PublicKey publicKey = null;
         PrivateKey privateKey = null;
         SecretKey secretKey = null;
 
         try {
-            publicKey = SimpleECDHE.base64ToPublicKey(base64PublicKey);
+            publicKey = SimpleECDHE.getPublicKey(publicKeyBytes);
         } catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
             return CommandResult.of("Public key not valid", true);
         }
 
         try {
-            privateKey = SimpleECDHE.base64ToPrivateKey(base64PrivateKey);
+            privateKey = SimpleECDHE.getPrivateKey(privateKeyBytes);
         } catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
             return CommandResult.of("Private key not valid", true);
@@ -75,6 +91,8 @@ public class SeedECDHECipherCommand extends Command {
         return CommandResult.of("Successful! Result:\n" + Base64.getEncoder().encodeToString(result));
     }
 
+
+
     @Override
     public String description() {
         return "Encrypt/decrypt entropy by ECDHE";
@@ -91,8 +109,8 @@ public class SeedECDHECipherCommand extends Command {
                 .subTree().addPossibleArg("encrypt")
 
                 .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .addTip("<base64 original entropy>", "Seed entropy")
                 .parent()
 
@@ -101,8 +119,8 @@ public class SeedECDHECipherCommand extends Command {
                 .subTree().addPossibleArg("decrypt")
 
                 .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .addTip("<base64 encrypted ECDHE entropy>", "Encrypted ECDHE seed entropy")
                 .parent()
 

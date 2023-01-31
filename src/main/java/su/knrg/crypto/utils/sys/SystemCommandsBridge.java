@@ -1,15 +1,16 @@
 package su.knrg.crypto.utils.sys;
 
+import su.knrg.crypto.Main;
+
 import java.io.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class SystemCommandsBridge {
-
     public static void runSystemCommand(String[] args) throws IOException {
         ProcessBuilder builder = new ProcessBuilder(args);
         builder.redirectErrorStream(true);
-        builder.directory(new File("./"));
+        builder.directory(Main.getCurrentPath().toFile());
 
         Process p = builder.start();
         BufferedReader processReader = new BufferedReader(new InputStreamReader(p.getInputStream()));

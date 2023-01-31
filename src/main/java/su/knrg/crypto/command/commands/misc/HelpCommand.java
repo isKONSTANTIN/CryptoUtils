@@ -1,8 +1,9 @@
-package su.knrg.crypto.command.commands;
+package su.knrg.crypto.command.commands.misc;
 
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
+import su.knrg.crypto.command.commands.CommandTag;
 
 import java.util.List;
 import java.util.Map;

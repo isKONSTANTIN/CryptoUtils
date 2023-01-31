@@ -1,4 +1,4 @@
-package su.knrg.crypto.command.commands;
+package su.knrg.crypto.command.commands.misc;
 
 import su.knrg.crypto.Main;
 import su.knrg.crypto.command.Command;

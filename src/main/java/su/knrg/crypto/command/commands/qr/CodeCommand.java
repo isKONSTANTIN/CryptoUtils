@@ -3,6 +3,7 @@ package su.knrg.crypto.command.commands.qr;
 import com.google.zxing.WriterException;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import org.jline.builtins.Completers;
+import su.knrg.crypto.Main;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -38,12 +39,12 @@ public class CodeCommand extends Command {
         boolean mode = oMode.map((s) -> s.equals("scan")).get();
 
         if (mode) {
-            Optional<String> oQRCodePath = args.stringV(1);
+            Optional<String> oQRCodePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
             if (oQRCodePath.isEmpty())
                 return CommandResult.of("QR code path not set", true);
 
-            Optional<String> oResultPath = args.stringV(2);
+            Optional<String> oResultPath = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
             String result;
             try {
@@ -70,7 +71,7 @@ public class CodeCommand extends Command {
         }else {
             int argIndex = 1;
 
-            Optional<String> oQRCodePath = args.stringV(argIndex++);
+            Optional<String> oQRCodePath = args.stringV(argIndex++).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
             if (oQRCodePath.isEmpty())
                 return CommandResult.of("QR code path not set", true);
@@ -102,7 +103,7 @@ public class CodeCommand extends Command {
 
             try {
                 if (data.toString().startsWith("f:")){
-                    String path = data.substring(2);
+                    String path = Main.getCurrentPath().resolve(data.substring(2)).toString();
 
                     if (level.isPresent())
                         generateFromFile(oQRCodePath.get(), path, oPixels.get(), level.get());
@@ -159,7 +160,7 @@ public class CodeCommand extends Command {
                 .subTree().addPossibleArg("scan")
 
                 .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .addTip("[result path]", "Result path to file")
                 .parent()
 

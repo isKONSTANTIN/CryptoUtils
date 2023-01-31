@@ -2,6 +2,7 @@ package su.knrg.crypto.command.commands.shamir;
 
 import com.codahale.shamir.Scheme;
 import org.jline.builtins.Completers;
+import su.knrg.crypto.Main;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -41,7 +42,7 @@ public class ShamirCommand extends Command {
             if (oForRecover.isEmpty())
                 return CommandResult.of("Parts for recover not set", true);
 
-            Optional<String> oPath = args.stringV(3);
+            Optional<String> oPath = args.stringV(3).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
             if (oPath.isEmpty())
                 return CommandResult.of("Path not set", true);
@@ -71,7 +72,7 @@ public class ShamirCommand extends Command {
                 return CommandResult.of("Failed to write files", true);
             }
         }else {
-            Optional<String> oResultPath = args.stringV(1);
+            Optional<String> oResultPath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
             if (oResultPath.isEmpty())
                 return CommandResult.of("Result path not set", true);
@@ -85,7 +86,7 @@ public class ShamirCommand extends Command {
                     if (path.isEmpty() || path.get().equals("null"))
                         continue;
 
-                    parts.put(i - 1, SimpleFileWorker.of(path.get()).readBytesFromFile());
+                    parts.put(i - 1, SimpleFileWorker.of(path.map((p) -> Main.getCurrentPath().resolve(p).toString()).get()).readBytesFromFile());
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -125,13 +126,13 @@ public class ShamirCommand extends Command {
                 .recursiveSubTree()
                 .addTip("<all parts>", "Number of all parts")
                 .addTip("<parts for recover>", "Number of required parts for recover")
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .parent()
 
                 .parent()
 
                 .subTree().addPossibleArg("join")
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .parent()
 
                 .build();

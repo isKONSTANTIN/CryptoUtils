@@ -32,6 +32,11 @@ public class SeedToBaseCommand extends Command {
             mnemonic[i] = args.stringV(i).get();
         }
 
+        for (String word : mnemonic) {
+            if (!BIP39.MAP.containsKey(word))
+                return CommandResult.of("'" + word + "' not found in BIP39 list");
+        }
+
         byte[] entropy = fromMnemonic(mnemonic);
 
         System.out.println("\nsource entropy:");

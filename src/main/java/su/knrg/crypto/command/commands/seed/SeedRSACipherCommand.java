@@ -1,6 +1,7 @@
 package su.knrg.crypto.command.commands.seed;
 
 import org.jline.builtins.Completers;
+import su.knrg.crypto.Main;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -83,7 +84,7 @@ public class SeedRSACipherCommand extends Command {
 
                 .recursiveSubTree()
                 .addTip("<base64 original entropy>", "Seed entropy")
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .parent()
 
                 .parent()
@@ -92,7 +93,7 @@ public class SeedRSACipherCommand extends Command {
 
                 .recursiveSubTree()
                 .addTip("<base64 encrypted RSA entropy>", "RSA seed entropy")
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .parent()
 
                 .parent()

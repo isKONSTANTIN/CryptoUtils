@@ -1,6 +1,7 @@
 package su.knrg.crypto.command.commands.hex;
 
 import org.jline.builtins.Completers;
+import su.knrg.crypto.Main;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -114,16 +115,16 @@ public class HexCommand extends Command {
                 .subTree().addPossibleArg("encode")
 
                 .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .parent()
 
                 .parent()
 
                 .subTree().addPossibleArg("decode")
                 .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
+                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
                 .parent()
                 .parent()
 
