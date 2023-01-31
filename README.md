@@ -1,4 +1,6 @@
 # CryptoUtils
+[![Github CI](https://github.com/isKONSTANTIN/CryptoUtils/actions/workflows/gradle.yml/badge.svg)](https://github.com/isKONSTANTIN/CryptoUtils/actions/workflows/gradle.yml)
+
 
 Terminal program for simple seed generation, encryption, decryption, backup and more.
 
