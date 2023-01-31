@@ -1,8 +1,12 @@
 package su.knrg.crypto.command;
 
+import org.jline.terminal.impl.jna.JnaTerminalProvider;
 import su.knrg.crypto.command.commands.CommandTag;
 
+import java.io.IOException;
 import java.util.*;
+
+import static su.knrg.crypto.utils.sys.SystemCommandsBridge.runSystemCommand;
 
 public class CommandHandler {
     protected HashMap<String, Command> commands = new HashMap<>();
@@ -14,8 +18,17 @@ public class CommandHandler {
 
         Command command = commands.get(words[0]);
 
-        if (command == null)
-            return CommandResult.COMMAND_NOT_FOUND;
+        if (command == null) {
+            try {
+                runSystemCommand(words);
+            } catch (IOException e) {
+                e.printStackTrace();
+
+                return CommandResult.COMMAND_NOT_FOUND;
+            }
+
+            return CommandResult.of("");
+        }
 
         return command.run(new ParamsContainer(Arrays.copyOfRange(words, 1, words.length)));
     }

@@ -166,10 +166,22 @@ public class CodeCommand extends Command {
                 .parent()
 
                 .subTree().addPossibleArg("generate")
-                .addCompleter(new Completers.FilesCompleter(Path.of("./")))
+
+                .recursiveSubTree()
+                .addTip("[result path]", "Result path to file")
                 .addTip("<pixels width>", "Pixels width result image")
-                .addTip("[error correction level]", "Correction level")
+
+                .subTree()
+                .addPossibleArgs(
+                        Arrays.stream(ErrorCorrectionLevel.values())
+                                .map(v -> v.name().toLowerCase())
+                                .toList()
+                )
+                .parent()
+
                 .addTip("<source text/f:path>", "Content of result image. f: for select file")
+                .parent()
+
                 .parent()
 
                 .build();

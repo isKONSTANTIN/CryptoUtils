@@ -107,6 +107,19 @@ public class ArgsTreeBuilder {
     }
 
     public Completers.TreeCompleter.Node build() {
+        return new Completers.TreeCompleter.Node(getCandidatesAsCompleter(), getNodes());
+    }
+
+    public Completer getCandidatesAsCompleter() {
+        List<Candidate> filteredCandidates = candidates.stream()
+                .filter((c) -> c instanceof Candidate)
+                .map((c) -> (Candidate) c)
+                .toList();
+
+        return completer != null ? completer : (r, l, c) -> c.addAll(filteredCandidates);
+    }
+
+    public ArrayList<Completers.TreeCompleter.Node> getNodes() {
         ArrayList<Completers.TreeCompleter.Node> nodes = new ArrayList<>();
 
         nodes.addAll(candidates.stream()
@@ -129,14 +142,7 @@ public class ArgsTreeBuilder {
                 .toList()
         );
 
-        List<Candidate> filteredCandidates = candidates.stream()
-                .filter((c) -> c instanceof Candidate)
-                .map((c) -> (Candidate) c)
-                .toList();
-
-        Completer nodeCompleter = completer != null ? completer : (r, l, c) -> c.addAll(filteredCandidates);
-
-        return new Completers.TreeCompleter.Node(nodeCompleter, nodes);
+        return nodes;
     }
 
 }

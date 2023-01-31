@@ -2,6 +2,10 @@ package su.knrg.crypto.command.commands.seed;
 
 import org.jline.builtins.Completers;
 import org.jline.console.impl.ConsoleEngineImpl;
+import org.jline.reader.Candidate;
+import org.jline.reader.Completer;
+import org.jline.reader.LineReader;
+import org.jline.reader.ParsedLine;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
@@ -9,7 +13,9 @@ import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.BIP39;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
+import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 
 import static su.knrg.crypto.command.commands.seed.SeedGeneratorCommand.printBits;
 import static su.knrg.crypto.utils.MnemonicGenerator.fromMnemonic;
@@ -37,7 +43,7 @@ public class SeedToBaseCommand extends Command {
 
     @Override
     public String description() {
-        return "Transform seed words to base64";
+        return "Transform seed words to base64 entropy without checksum";
     }
 
     @Override
@@ -53,10 +59,18 @@ public class SeedToBaseCommand extends Command {
     @Override
     public Completers.TreeCompleter.Node getArgsTree(String alias) {
         ArgsTreeBuilder builder = ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .subTree();
+                .recursiveSubTree();
+
+        Completer completer = (reader, line, candidates) ->
+                candidates.addAll(
+                        Arrays.stream(BIP39.ARRAY)
+                                .filter(s -> s.contains(line.word()))
+                                .map(Candidate::new)
+                                .toList()
+                );
 
         for(int i = 0; i < 24; i++)
-            builder.addPossibleArgs(BIP39.ARRAY);
+            builder.addCompleter(completer);
 
         return builder.parent().build();
     }
