@@ -26,12 +26,12 @@ public class HexCommand extends Command {
         if (!(oMode.get().equals("encode") || oMode.get().equals("decode")))
             return CommandResult.of("Mode must be 'encode' or 'decode'", true);
 
-        Optional<String> oSource = args.stringV(1);
+        Optional<String> oSource = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
         if (oSource.isEmpty())
             return CommandResult.of("Source path not set", true);
 
-        Optional<String> oResult = args.stringV(2);
+        Optional<String> oResult = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
         if (oResult.isEmpty())
             return CommandResult.of("Result path not set", true);

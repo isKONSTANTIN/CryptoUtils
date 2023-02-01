@@ -21,8 +21,8 @@ public class SeedECDHECipherCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
         Optional<String> oMode = args.stringV(0);
-        Optional<String> oPublicKey = args.stringV(1);
-        Optional<String> oPrivateKey = args.stringV(2);
+        Optional<String> oPublicKey = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
+        Optional<String> oPrivateKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p).toString());
         Optional<String> oEntropy = args.stringV(3);
 
         if (oMode.isEmpty() || oPublicKey.isEmpty() || oPrivateKey.isEmpty() || oEntropy.isEmpty())

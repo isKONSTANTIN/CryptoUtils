@@ -24,7 +24,7 @@ public class SeedRSACipherCommand extends Command {
     public CommandResult run(ParamsContainer args) {
         Optional<String> oMode = args.stringV(0);
         Optional<String> oEntropy = args.stringV(1);
-        Optional<String> oKey = args.stringV(2);
+        Optional<String> oKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
         if (oMode.isEmpty() || oKey.isEmpty() || oEntropy.isEmpty())
             return CommandResult.of("Some argument not set", true);
