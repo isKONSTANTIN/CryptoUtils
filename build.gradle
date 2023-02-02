@@ -37,6 +37,12 @@ dependencies {
     configurations.implementation.extendsFrom(configurations.include)
 }
 
+java {
+    toolchain {
+        languageVersion.set(JavaLanguageVersion.of(17))
+    }
+}
+
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
