@@ -3,9 +3,31 @@
 
 Terminal program for simple seed generation, encryption, decryption, backup and more.
 
+<pre>cu&gt; gpg --output seed.gpg --recipient bob@example.com -e seed.txt
+
+cu&gt; ls
+CryptoUtils-0.2.1.jar
+seed.gpg
+seed.txt
+
+cu&gt; shamir split 3 2 seed.gpg
+Done!
+cu&gt; hex encode seed.shp-1 seed.shp-1.hex
+Done!
+cu&gt; cat seed.shp-1.hex
+CE40898B7ECB74EE31FAADD192064B1DD501D8CBC17A74341241A62D11CF4F6B75E6916CE281CE5911C2E5278A4C5CC
+177DDB77F9931FB19FACA0F30FDA00E3090D84CBA3B4C6B1CE62915DC1F5D88B66C332B29CCAAB7BC3495C2EADA05D9
+
+...
+
+cu&gt; qr generate seed-2-qr.png 500 l f:seed.shp-2
+Done
+cu&gt; seed_to_base satoshi like gold
+<span style="color:#06989A">go</span>at      <span style="color:#06989A">go</span>ddess   <span style="background-color:#FFFFFF"><span style="color:#1C1C1C">gold   </span></span>   <span style="color:#06989A">go</span>od      <span style="color:#06989A">go</span>ose     <span style="color:#06989A">go</span>rilla   <span style="color:#06989A">go</span>spel    <span style="color:#06989A">go</span>ssip    <span style="color:#06989A">go</span>vern    <span style="color:#06989A">go</span>wn</pre>
+
 <!-- TOC -->
 * [CryptoUtils](#cryptoutils)
-  * [Commands](#commands)
+  * [All Commands](#all-commands)
     * [Cryptocurrencies](#cryptocurrencies)
     * [Cryptography](#cryptography)
     * [Backups](#backups)
@@ -13,6 +35,7 @@ Terminal program for simple seed generation, encryption, decryption, backup and 
   * [Common Commands Tips](#common-commands-tips)
     * [Seed Command](#seed-command)
     * [Seed To Base Command](#seed-to-base-command)
+    * [RSA/ECDHE Commands P.S.](#rsaecdhe-commands-ps)
     * [RSA Key Command](#rsa-key-command)
     * [RSA Cipher Command](#rsa-cipher-command)
     * [ECDHE Key Command](#ecdhe-key-command)
@@ -24,7 +47,7 @@ Terminal program for simple seed generation, encryption, decryption, backup and 
   * [P.S.](#ps)
 <!-- TOC -->
 
-## Commands
+## All Commands
 
 ### Cryptocurrencies
 
@@ -76,14 +99,18 @@ Uses SecureRandom()
 
 Converts a mnemonic phrase into the original entropy and encodes it in Base64. Note that the command does not check the hash sum. Call the seed command with base64 result and check the last words
 
+### RSA/ECDHE Commands P.S.
+
+The commands below are created for a one-time sending of a mnemonic phrase. 
+
+Recommended to use gpg for backups
+
 ### RSA Key Command
 ```
 > rsa_key <public RSA key file path> <private RSA key file path> [keys size]
 ```
 
 Generate public and private RSA keys for cipher.
-
-**Not recommended for use**
 
 ### RSA Cipher Command
 ```
@@ -92,8 +119,6 @@ Generate public and private RSA keys for cipher.
 Encrypt or decrypt entropy by RSA algorithm.
 
 When decrypting, it automatically calls the seed command to output a mnemonic phrase
-
-**Not recommended for use**
 
 ### ECDHE Key Command
 ```
