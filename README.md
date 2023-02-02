@@ -3,6 +3,23 @@
 
 Terminal program for simple seed generation, encryption, decryption, backup and more.
 
+## What Is This Thing Good For?
+
+Have you ever thought that writing a mnemonic phrase (or any other secret) on a piece of paper is not the safest storage? Physical damage, loss or declassification is not excluded.
+
+It would be much better if we could safely divide into several parts and distribute them to our friends or relatives.
+A simple separation will not work - if we lose at least one part, we would not be able to restore the data completely.
+
+This tool allows you to [use the Shamir secret separation scheme](https://github.com/isKONSTANTIN/CryptoUtils/wiki/Commands#shamirs-secret-separation-scheme): divide into N parts, and any K will allow you to completely restore the original data. 
+
+And there are also [commands](https://github.com/isKONSTANTIN/CryptoUtils/wiki/Commands#all-commands-list) for generating qr codes, converting binary files into hex-string for printing, and much more
+
+Here is a photo of my containers with keys and a mnemonic phrase:
+
+![keys](https://user-images.githubusercontent.com/20424507/216436036-83beaae5-8761-4c4c-b07f-bed3b9c6a229.png)
+
+## Usage Example
+
 <pre>cu&gt; gpg --output seed.gpg --recipient bob@example.com -e seed.txt
 
 cu&gt; ls
