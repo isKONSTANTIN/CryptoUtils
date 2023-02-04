@@ -8,11 +8,11 @@ import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
-import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 import su.knrg.crypto.utils.codes.AbstractCodeWorker;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Base64;
@@ -44,7 +44,7 @@ public class CodeCommand extends Command {
             if (oQRCodePath.isEmpty())
                 return CommandResult.of("QR code path not set", true);
 
-            Optional<String> oResultPath = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p).toString());
+            Optional<Path> oResultPath = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
 
             String result;
             try {
@@ -59,7 +59,7 @@ public class CodeCommand extends Command {
 
             if (oResultPath.isPresent()) {
                 try {
-                    SimpleFileWorker.of(oResultPath.get()).writeToFile(Base64.getDecoder().decode(result));
+                    Files.write(oResultPath.get(), Base64.getDecoder().decode(result));
                 } catch (IOException e) {
                     e.printStackTrace();
 
@@ -141,7 +141,7 @@ public class CodeCommand extends Command {
     }
 
     public void generateFromFile(String resultPath, String sourcePath, int pixelsWidth, ErrorCorrectionLevel level) throws IOException, WriterException {
-        generate(resultPath, Base64.getEncoder().encodeToString(SimpleFileWorker.of(sourcePath).readBytesFromFile()), pixelsWidth, level);
+        generate(resultPath, Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of(sourcePath))), pixelsWidth, level);
     }
 
     @Override

@@ -7,11 +7,11 @@ import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
-import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.SecureRandom;
 import java.util.HashMap;
@@ -42,7 +42,7 @@ public class ShamirCommand extends Command {
             if (oForRecover.isEmpty())
                 return CommandResult.of("Parts for recover not set", true);
 
-            Optional<String> oPath = args.stringV(3).map((p) -> Main.getCurrentPath().resolve(p).toString());
+            Optional<Path> oPath = args.stringV(3).map((p) -> Main.getCurrentPath().resolve(p));
 
             if (oPath.isEmpty())
                 return CommandResult.of("Path not set", true);
@@ -50,14 +50,14 @@ public class ShamirCommand extends Command {
             byte[] data;
 
             try {
-                data = SimpleFileWorker.of(oPath.get()).readBytesFromFile();
+                data = Files.readAllBytes(oPath.get());
             } catch (IOException e) {
                 e.printStackTrace();
 
                 return CommandResult.of("Failed to read file", true);
             }
 
-            String filename = new File(oPath.get()).getName()
+            String filename = oPath.get().toFile().getName()
                     .replaceFirst("[.][^.]+$", ""); // remove extension
 
             Scheme scheme = new Scheme(new SecureRandom(), oAllParts.get(), oForRecover.get());
@@ -65,14 +65,14 @@ public class ShamirCommand extends Command {
 
             try {
                 for (Map.Entry<Integer, byte[]> entry : parts.entrySet())
-                    SimpleFileWorker.of(filename + ".shp-" + entry.getKey()).writeToFile(entry.getValue());
+                    Files.write(Path.of(filename + ".shp-" + entry.getKey()), entry.getValue());
             }catch (Exception e) {
                 e.printStackTrace();
 
                 return CommandResult.of("Failed to write files", true);
             }
         }else {
-            Optional<String> oResultPath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
+            Optional<Path> oResultPath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
 
             if (oResultPath.isEmpty())
                 return CommandResult.of("Result path not set", true);
@@ -86,7 +86,7 @@ public class ShamirCommand extends Command {
                     if (path.isEmpty() || path.get().equals("null"))
                         continue;
 
-                    parts.put(i - 1, SimpleFileWorker.of(path.map((p) -> Main.getCurrentPath().resolve(p).toString()).get()).readBytesFromFile());
+                    parts.put(i - 1, Files.readAllBytes(path.map((p) -> Main.getCurrentPath().resolve(p)).get()));
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -97,7 +97,7 @@ public class ShamirCommand extends Command {
             Scheme scheme = new Scheme(new SecureRandom(), 5, 4);
 
             try {
-                SimpleFileWorker.of(oResultPath.get()).writeToFile(scheme.join(parts));
+                Files.write(oResultPath.get(), scheme.join(parts));
             } catch (IOException e) {
                 e.printStackTrace();
 

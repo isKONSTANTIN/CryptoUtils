@@ -7,10 +7,10 @@ import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
-import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import javax.crypto.*;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
@@ -21,8 +21,8 @@ public class SeedECDHECipherCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
         Optional<String> oMode = args.stringV(0);
-        Optional<String> oPublicKey = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
-        Optional<String> oPrivateKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p).toString());
+        Optional<Path> oPublicKey = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
+        Optional<Path> oPrivateKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
         Optional<String> oEntropy = args.stringV(3);
 
         if (oMode.isEmpty() || oPublicKey.isEmpty() || oPrivateKey.isEmpty() || oEntropy.isEmpty())
@@ -33,14 +33,14 @@ public class SeedECDHECipherCommand extends Command {
 
         byte[] pubKey;
         try {
-            pubKey = SimpleFileWorker.of(oPublicKey.get()).readBytesFromFile();
+            pubKey = Files.readAllBytes(oPublicKey.get());
         } catch (Exception e) {
             return CommandResult.of("Failed to read public key from file!", true);
         }
 
         byte[] secKey;
         try {
-            secKey = SimpleFileWorker.of(oPrivateKey.get()).readBytesFromFile();
+            secKey = Files.readAllBytes(oPrivateKey.get());
         } catch (Exception e) {
             return CommandResult.of("Failed to read private key from file!", true);
         }

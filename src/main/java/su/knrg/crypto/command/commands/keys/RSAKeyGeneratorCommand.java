@@ -6,10 +6,10 @@ import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
-import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.util.Optional;
@@ -17,8 +17,8 @@ import java.util.Optional;
 public class RSAKeyGeneratorCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
-        Optional<String> publicPath = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p).toString());
-        Optional<String> privatePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
+        Optional<Path> publicPath = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p));
+        Optional<Path> privatePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
         Optional<Integer> size = args.intV(2);
 
         if (publicPath.isEmpty() || privatePath.isEmpty())
@@ -27,12 +27,12 @@ public class RSAKeyGeneratorCommand extends Command {
         return run(publicPath.get(), privatePath.get(), size.orElse(2048));
     }
 
-    public CommandResult run(String publicPath, String privatePath, int size) {
+    public CommandResult run(Path publicPath, Path privatePath, int size) {
         try {
             KeyPair keyPair = SimpleRSA.generateKeyPair(size);
 
-            SimpleFileWorker.of(publicPath).writeToFile(SimpleRSA.keyToBytes(keyPair.getPublic()));
-            SimpleFileWorker.of(privatePath).writeToFile(SimpleRSA.keyToBytes(keyPair.getPrivate()));
+            Files.write(publicPath, SimpleRSA.keyToBytes(keyPair.getPublic()));
+            Files.write(privatePath, SimpleRSA.keyToBytes(keyPair.getPrivate()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

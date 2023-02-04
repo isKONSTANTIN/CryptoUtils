@@ -6,13 +6,13 @@ import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
-import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.SimpleRSA;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
@@ -24,7 +24,7 @@ public class SeedRSACipherCommand extends Command {
     public CommandResult run(ParamsContainer args) {
         Optional<String> oMode = args.stringV(0);
         Optional<String> oEntropy = args.stringV(1);
-        Optional<String> oKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p).toString());
+        Optional<Path> oKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (oMode.isEmpty() || oKey.isEmpty() || oEntropy.isEmpty())
             return CommandResult.of("Some argument not set", true);
@@ -34,7 +34,7 @@ public class SeedRSACipherCommand extends Command {
 
         byte[] key;
         try {
-            key = SimpleFileWorker.of(oKey.get()).readBytesFromFile();
+            key = Files.readAllBytes(oKey.get());
         } catch (Exception e) {
             return CommandResult.of("Failed to read key from file!", true);
         }

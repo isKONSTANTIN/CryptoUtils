@@ -7,9 +7,9 @@ import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
 import su.knrg.crypto.utils.SimpleECDHE;
-import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.util.Optional;
@@ -17,8 +17,8 @@ import java.util.Optional;
 public class ECDHEKeyGeneratorCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
-        Optional<String> publicPath = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p).toString());
-        Optional<String> privatePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
+        Optional<Path> publicPath = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p));
+        Optional<Path> privatePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (publicPath.isEmpty() || privatePath.isEmpty())
             return CommandResult.of("Some argument not set", true);
@@ -26,12 +26,12 @@ public class ECDHEKeyGeneratorCommand extends Command {
         return run(publicPath.get(), privatePath.get());
     }
 
-    public CommandResult run(String publicPath, String privatePath) {
+    public CommandResult run(Path publicPath, Path privatePath) {
         try {
             KeyPair keyPair = SimpleECDHE.generateECKeys();
 
-            SimpleFileWorker.of(publicPath).writeToFile(SimpleECDHE.keyToBytes(keyPair.getPublic()));
-            SimpleFileWorker.of(privatePath).writeToFile(SimpleECDHE.keyToBytes(keyPair.getPrivate()));
+            Files.write(publicPath, SimpleECDHE.keyToBytes(keyPair.getPublic()));
+            Files.write(privatePath, SimpleECDHE.keyToBytes(keyPair.getPrivate()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

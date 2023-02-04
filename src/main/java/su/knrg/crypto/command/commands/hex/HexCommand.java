@@ -6,10 +6,10 @@ import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
-import su.knrg.crypto.utils.SimpleFileWorker;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
 
@@ -26,12 +26,12 @@ public class HexCommand extends Command {
         if (!(oMode.get().equals("encode") || oMode.get().equals("decode")))
             return CommandResult.of("Mode must be 'encode' or 'decode'", true);
 
-        Optional<String> oSource = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
+        Optional<Path> oSource = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (oSource.isEmpty())
             return CommandResult.of("Source path not set", true);
 
-        Optional<String> oResult = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p).toString());
+        Optional<Path> oResult = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (oResult.isEmpty())
             return CommandResult.of("Result path not set", true);
@@ -42,7 +42,7 @@ public class HexCommand extends Command {
             byte[] bytes;
 
             try {
-                bytes = SimpleFileWorker.of(oSource.get()).readBytesFromFile();
+                bytes = Files.readAllBytes(oSource.get());
             } catch (IOException e) {
                 e.printStackTrace();
 
@@ -50,7 +50,7 @@ public class HexCommand extends Command {
             }
 
             try {
-                SimpleFileWorker.of(oResult.get()).writeToFile(bytesToHex(bytes));
+                Files.writeString(oResult.get(), bytesToHex(bytes));
             } catch (IOException e) {
                 e.printStackTrace();
 
@@ -60,7 +60,7 @@ public class HexCommand extends Command {
             String hex;
 
             try {
-                hex = SimpleFileWorker.of(oSource.get()).readFromFile();
+                hex = Files.readString(oSource.get());
             } catch (IOException e) {
                 e.printStackTrace();
 
@@ -68,7 +68,7 @@ public class HexCommand extends Command {
             }
 
             try {
-                SimpleFileWorker.of(oResult.get()).writeToFile(hexStringToByteArray(hex));
+                Files.write(oResult.get(), hexStringToByteArray(hex));
             } catch (IOException e) {
                 e.printStackTrace();
 
