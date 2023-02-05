@@ -5,7 +5,7 @@ import su.knst.crypto.Main;
 import java.util.*;
 
 public class WordLists {
-    protected static HashMap<String, WordList> lists = new HashMap<>();
+    protected static final HashMap<String, WordList> lists = new HashMap<>();
     protected static WordList activeList;
 
     public static void preload() {
@@ -33,10 +33,10 @@ public class WordLists {
             return true;
 
         String path = Resources.LISTS_PATH + name + ".list";
-        String text = null;
+        String text;
 
         try {
-            text = new String(Main.class.getResourceAsStream(path).readAllBytes());
+            text = new String(Objects.requireNonNull(Main.class.getResourceAsStream(path)).readAllBytes());
         } catch (Exception e) {
             return false;
         }
@@ -59,36 +59,13 @@ public class WordLists {
                 .toList();
     }
 
-    public static class WordList {
-        protected String name;
-        protected String[] array;
-        protected Map<String, Integer> map;
-
-        public WordList(String name, String[] array, Map<String, Integer> map) {
-            this.name = name;
-            this.array = array;
-            this.map = map;
-        }
-
-        public String getName() {
-            return name;
-        }
-
+    public record WordList(String name, String[] array, Map<String, Integer> map) {
         public Optional<String> getWord(int index) {
             return Optional.ofNullable(index >= 0 && index < array.length ? array[index] : null);
         }
 
         public Optional<Integer> getIndex(String word) {
             return Optional.ofNullable(map.get(word));
-        }
-
-        // TODO: fix encapsulation leak
-        public String[] getArray() {
-            return array;
-        }
-
-        public Map<String, Integer> getMap() {
-            return map;
         }
     }
 }

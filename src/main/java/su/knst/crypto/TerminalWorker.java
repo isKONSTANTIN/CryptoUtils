@@ -21,7 +21,7 @@ public class TerminalWorker {
 
     protected boolean run = true;
 
-    protected CommandHandler handler;
+    protected final CommandHandler handler;
 
     public TerminalWorker(CommandHandler handler) {
         this.handler = handler;
@@ -52,7 +52,7 @@ public class TerminalWorker {
 
         writer = terminal.writer();
 
-        writer.println(handler.run("help").message);
+        writer.println(handler.run("help").message());
 
         while (run) {
             String line;
@@ -67,7 +67,7 @@ public class TerminalWorker {
 
             CommandResult result = handler.run(line);
 
-            writer.println(result.message);
+            writer.println(result.message());
         }
 
     }

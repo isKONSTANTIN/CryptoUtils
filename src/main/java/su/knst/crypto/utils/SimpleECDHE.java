@@ -11,28 +11,15 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
 
 public class SimpleECDHE {
-    static byte[] iv = new SecureRandom().generateSeed(16);
+    static final byte[] iv = new SecureRandom().generateSeed(16);
     static {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
     }
 
-    public static String keyToBase64(Key key) {
-        return Base64.getEncoder().encodeToString(keyToBytes(key));
-    }
-
     public static byte[] keyToBytes(Key key) {
         return key.getEncoded();
-    }
-
-    public static PublicKey base64ToPublicKey(String text) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
-        return getPublicKey(Base64.getDecoder().decode(text));
-    }
-
-    public static PrivateKey base64ToPrivateKey(String text) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
-        return getPrivateKey(Base64.getDecoder().decode(text));
     }
 
     public static PublicKey getPublicKey(byte[] bytes) throws NoSuchAlgorithmException, InvalidKeySpecException, NoSuchProviderException {
@@ -65,7 +52,7 @@ public class SimpleECDHE {
         return keyAgreement.generateSecret("AES");
     }
 
-    public static byte[] encrypt(SecretKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException, InvalidKeyException, ShortBufferException, IllegalBlockSizeException, BadPaddingException {
+    public static byte[] encrypt(SecretKey key, byte[] data) throws GeneralSecurityException {
         IvParameterSpec ivSpec = new IvParameterSpec(iv);
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec);
@@ -82,7 +69,7 @@ public class SimpleECDHE {
         return cipherDataWithIv;
     }
 
-    public static byte[] decrypt(SecretKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, NoSuchProviderException, InvalidAlgorithmParameterException, InvalidKeyException, ShortBufferException, IllegalBlockSizeException, BadPaddingException {
+    public static byte[] decrypt(SecretKey key, byte[] data) throws GeneralSecurityException {
         Key decryptionKey = new SecretKeySpec(key.getEncoded(), key.getAlgorithm());
         byte[] iv = new byte[data[0]];
         byte[] cipherData = new byte[data.length - data[0] - 1];

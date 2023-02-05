@@ -41,7 +41,7 @@ public class WordListCommand extends Command {
         if (newWordList == null)
             return CommandResult.of("List not found", true);
 
-        return CommandResult.of("Now wordlist is '" + newWordList.getName() + "'");
+        return CommandResult.of("Now wordlist is '" + newWordList.name() + "'");
     }
 
     @Override

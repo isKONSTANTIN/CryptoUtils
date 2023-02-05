@@ -11,6 +11,7 @@ public class ExitCommand extends Command {
         return run();
     }
 
+    @SuppressWarnings("SameReturnValue")
     public CommandResult run() {
         Main.shutdown();
 

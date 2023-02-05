@@ -35,8 +35,7 @@ public class SimpleQRCodeWorker extends AbstractCodeWorker{
         BufferedImage image = ImageIO.read(new FileInputStream(path));
         BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(new BufferedImageLuminanceSource(image)));
 
-        Map<DecodeHintType, Object> tmpHintsMap = new EnumMap<DecodeHintType, Object>(
-                DecodeHintType.class);
+        Map<DecodeHintType, Object> tmpHintsMap = new EnumMap<>(DecodeHintType.class);
         tmpHintsMap.put(DecodeHintType.TRY_HARDER, Boolean.TRUE);
         tmpHintsMap.put(DecodeHintType.PURE_BARCODE, Boolean.FALSE);
 

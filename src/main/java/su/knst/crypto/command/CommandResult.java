@@ -1,13 +1,6 @@
 package su.knst.crypto.command;
 
-public class CommandResult {
-    public final String message;
-    public final boolean error;
-
-    public CommandResult(String message, boolean error) {
-        this.message = message;
-        this.error = error;
-    }
+public record CommandResult(String message, boolean error) {
 
     public static CommandResult of(String message, boolean error) {
         return new CommandResult(message, error);

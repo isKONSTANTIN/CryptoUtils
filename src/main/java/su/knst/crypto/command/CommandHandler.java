@@ -8,9 +8,9 @@ import java.util.*;
 import static su.knst.crypto.utils.sys.SystemCommandsBridge.runSystemCommand;
 
 public class CommandHandler {
-    protected HashMap<String, Command> commands = new HashMap<>();
-    protected ArrayList<String> commandsNames = new ArrayList<>();
-    protected LinkedHashMap<CommandTag, ArrayList<String>> commandsNamesByTag = new LinkedHashMap<>();
+    protected final HashMap<String, Command> commands = new HashMap<>();
+    protected final ArrayList<String> commandsNames = new ArrayList<>();
+    protected final LinkedHashMap<CommandTag, ArrayList<String>> commandsNamesByTag = new LinkedHashMap<>();
 
     public CommandResult run(String line) {
         String[] words = line.split(" ");
@@ -32,17 +32,15 @@ public class CommandHandler {
         return command.run(new ParamsContainer(Arrays.copyOfRange(words, 1, words.length)));
     }
 
-    public boolean registerCommand(String alias, Command command) {
+    public <T extends Command> void registerCommand(String alias, T command) {
         if (commands.containsKey(alias))
-            return false;
+            return;
 
         command.init(this);
 
         commands.put(alias, command);
         commandsNames.add(alias);
         addToTagMap(command.tag(), alias);
-
-        return true;
     }
 
     protected void addToTagMap(CommandTag tag, String alias) {
@@ -56,13 +54,19 @@ public class CommandHandler {
     }
 
     public <T extends Command> T getCommand(String alias, Class<T> tClass) {
-        return (T) commands.get(alias);
+        Command command = commands.get(alias);
+
+        if (!tClass.isInstance(command))
+            return null;
+
+        return tClass.cast(command);
     }
 
     public Map<String, Command> getCommands() {
         return Collections.unmodifiableMap(commands);
     }
 
+    @SuppressWarnings("unused")
     public List<String> getCommandsNames() {
         return Collections.unmodifiableList(commandsNames);
     }

@@ -20,9 +20,10 @@ import java.io.IOException;
 import java.nio.file.Path;
 
 public class Main {
-    protected CommandHandler handler = new CommandHandler();
+    protected final CommandHandler handler = new CommandHandler();
     protected static TerminalWorker terminalWorker;
     protected static Path currentPath = Path.of("./").toAbsolutePath();
+
     Main() {
         WordLists.preload();
 

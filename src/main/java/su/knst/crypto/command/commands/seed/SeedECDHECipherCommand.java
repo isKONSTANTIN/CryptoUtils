@@ -49,14 +49,15 @@ public class SeedECDHECipherCommand extends Command {
     }
 
     public CommandResult run(boolean mode, byte[] publicKeyBytes, byte[] privateKeyBytes, byte[] entropy) {
-        PublicKey publicKey = null;
-        PrivateKey privateKey = null;
-        SecretKey secretKey = null;
+        PublicKey publicKey;
+        PrivateKey privateKey;
+        SecretKey secretKey;
 
         try {
             publicKey = SimpleECDHE.getPublicKey(publicKeyBytes);
         } catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
+
             return CommandResult.of("Public key not valid", true);
         }
 
@@ -64,6 +65,7 @@ public class SeedECDHECipherCommand extends Command {
             privateKey = SimpleECDHE.getPrivateKey(privateKeyBytes);
         } catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
+
             return CommandResult.of("Private key not valid", true);
         }
 
@@ -71,17 +73,17 @@ public class SeedECDHECipherCommand extends Command {
             secretKey = SimpleECDHE.generateSharedSecret(privateKey, publicKey);
         } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException e) {
             e.printStackTrace();
+
             return CommandResult.of("Secret key failed", true);
         }
         byte[] result;
 
         try {
             result = mode ? SimpleECDHE.encrypt(secretKey, entropy) : SimpleECDHE.decrypt(secretKey, entropy);
-        } catch (InvalidAlgorithmParameterException | NoSuchPaddingException | ShortBufferException |
-                 IllegalBlockSizeException | NoSuchAlgorithmException | BadPaddingException | NoSuchProviderException |
-                 InvalidKeyException e) {
+        } catch (GeneralSecurityException e) {
             System.err.println("Error:");
             e.printStackTrace();
+
             return CommandResult.of("Failed", true);
         }
 

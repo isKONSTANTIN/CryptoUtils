@@ -25,14 +25,14 @@ public class SeedToBaseCommand extends Command {
         String[] mnemonic = new String[24];
 
         for (int i = 0; i < args.size(); i++) {
-            mnemonic[i] = args.stringV(i).get();
+            mnemonic[i] = args.stringV(i).orElseThrow();
         }
 
         WordLists.WordList wordList = WordLists.getActiveList();
 
         for (String word : mnemonic) {
             if (wordList.getIndex(word).isEmpty())
-                return CommandResult.of("'" + word + "' not found in " + wordList.getName() + " list");
+                return CommandResult.of("'" + word + "' not found in " + wordList.name() + " list");
         }
 
         byte[] entropy = fromMnemonic(mnemonic);
@@ -66,7 +66,7 @@ public class SeedToBaseCommand extends Command {
 
         Completer completer = (reader, line, candidates) ->
                 candidates.addAll(
-                        Arrays.stream(WordLists.getActiveList().getArray())
+                        Arrays.stream(WordLists.getActiveList().array())
                                 .filter(s -> s.contains(line.word()))
                                 .map(Candidate::new)
                                 .toList()

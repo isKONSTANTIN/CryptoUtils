@@ -9,7 +9,6 @@ import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
 
 public class SimpleRSA {
     public static KeyPair generateKeyPair(int keySize) throws NoSuchAlgorithmException {
@@ -19,20 +18,8 @@ public class SimpleRSA {
         return generator.generateKeyPair();
     }
 
-    public static String keyToBase64(Key key) {
-        return Base64.getEncoder().encodeToString(keyToBytes(key));
-    }
-
     public static byte[] keyToBytes(Key key) {
         return key.getEncoded();
-    }
-
-    public static PublicKey base64ToPublicKey(String text) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        return getPublicKey(Base64.getDecoder().decode(text));
-    }
-
-    public static PrivateKey base64ToPrivateKey(String text) throws NoSuchAlgorithmException, InvalidKeySpecException {
-        return getPrivateKey(Base64.getDecoder().decode(text));
     }
 
     public static PublicKey getPublicKey(byte[] bytes) throws NoSuchAlgorithmException, InvalidKeySpecException {

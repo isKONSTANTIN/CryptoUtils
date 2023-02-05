@@ -8,10 +8,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+@SuppressWarnings("unused")
 public class ArgsTreeBuilder {
 
     protected ArgsTreeBuilder parent;
-    protected ArrayList<Object> candidates = new ArrayList<>();
+    protected final ArrayList<Object> candidates = new ArrayList<>();
     protected Completer completer;
 
     public static ArgsTreeBuilder builder() {
@@ -56,7 +57,7 @@ public class ArgsTreeBuilder {
     }
 
     public ArgsTreeBuilder addTip(Candidate candidate) {
-        Completer completer = (reader, line, cands) -> cands.add(new Candidate(
+        Completer completer = (reader, line, candidates) -> candidates.add(new Candidate(
                         candidate.value().isEmpty() ? line.word() : candidate.value(),
                         candidate.displ(),
                         candidate.group(),

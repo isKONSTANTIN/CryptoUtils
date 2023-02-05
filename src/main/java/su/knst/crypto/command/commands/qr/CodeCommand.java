@@ -21,7 +21,7 @@ import java.util.Optional;
 
 public class CodeCommand extends Command {
 
-    protected AbstractCodeWorker worker;
+    protected final AbstractCodeWorker worker;
     public CodeCommand(AbstractCodeWorker worker) {
         this.worker = worker;
     }
@@ -111,7 +111,7 @@ public class CodeCommand extends Command {
                         generateFromFile(oQRCodePath.get(), path, oPixels.get());
                 }else {
                     for (int i = argIndex; i < args.size(); i++)
-                        data.append(" ").append(args.stringV(i).get());
+                        data.append(" ").append(args.stringV(i).orElseThrow());
 
                     if (level.isPresent())
                         generate(oQRCodePath.get(), data.toString(), oPixels.get(), level.get());
@@ -128,20 +128,20 @@ public class CodeCommand extends Command {
         return CommandResult.of("Done");
     }
 
-    public void generate(String resultPath, String text, int pixelsWidth, ErrorCorrectionLevel level) throws IOException, WriterException {
-        worker.generateCode(text, resultPath, pixelsWidth, pixelsWidth, level);
+    public void generate(String resultPath, String text, int pixelsSide, ErrorCorrectionLevel level) throws IOException, WriterException {
+        worker.generateCode(text, resultPath, pixelsSide, pixelsSide, level);
     }
 
-    public void generate(String resultPath, String text, int pixelsWidth) throws IOException, WriterException {
-        generate(resultPath, text, pixelsWidth, ErrorCorrectionLevel.L);
+    public void generate(String resultPath, String text, int pixelsSide) throws IOException, WriterException {
+        generate(resultPath, text, pixelsSide, ErrorCorrectionLevel.L);
     }
 
-    public void generateFromFile(String resultPath, String sourcePath, int pixelsWidth) throws IOException, WriterException {
-        generateFromFile(resultPath, sourcePath, pixelsWidth, ErrorCorrectionLevel.L);
+    public void generateFromFile(String resultPath, String sourcePath, int pixelsSide) throws IOException, WriterException {
+        generateFromFile(resultPath, sourcePath, pixelsSide, ErrorCorrectionLevel.L);
     }
 
-    public void generateFromFile(String resultPath, String sourcePath, int pixelsWidth, ErrorCorrectionLevel level) throws IOException, WriterException {
-        generate(resultPath, Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of(sourcePath))), pixelsWidth, level);
+    public void generateFromFile(String resultPath, String sourcePath, int pixelsSide, ErrorCorrectionLevel level) throws IOException, WriterException {
+        generate(resultPath, Base64.getEncoder().encodeToString(Files.readAllBytes(Path.of(sourcePath))), pixelsSide, level);
     }
 
     @Override

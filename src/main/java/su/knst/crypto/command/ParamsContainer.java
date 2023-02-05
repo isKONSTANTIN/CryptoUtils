@@ -6,8 +6,9 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 
+@SuppressWarnings("unused")
 public class ParamsContainer {
-    protected List<String> rawParams;
+    protected final List<String> rawParams;
 
     public ParamsContainer(List<String> rawParams) {
         this.rawParams = rawParams;

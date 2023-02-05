@@ -43,7 +43,7 @@ public class SeedRSACipherCommand extends Command {
     }
 
     public CommandResult run(boolean mode, byte[] bytesKey, byte[] entropy) {
-        Key key = null;
+        Key key;
 
         try {
             key = mode ? SimpleRSA.getPublicKey(bytesKey) : SimpleRSA.getPrivateKey(bytesKey);
@@ -52,7 +52,7 @@ public class SeedRSACipherCommand extends Command {
             return CommandResult.of("Key not valid", true);
         }
 
-        byte[] result = null;
+        byte[] result;
 
         try {
             result = mode ? SimpleRSA.encrypt((PublicKey) key, entropy) : SimpleRSA.decrypt((PrivateKey) key, entropy);

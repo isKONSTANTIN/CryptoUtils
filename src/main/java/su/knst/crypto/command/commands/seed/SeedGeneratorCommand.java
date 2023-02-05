@@ -32,6 +32,7 @@ public class SeedGeneratorCommand extends Command {
         return run(entropy32);
     }
 
+    @SuppressWarnings("SameReturnValue")
     public CommandResult run(byte[] entropy32) {
         byte[] entropy16 = Arrays.copyOfRange(entropy32, 0, 16);
 
@@ -44,8 +45,8 @@ public class SeedGeneratorCommand extends Command {
         System.out.println("\n12-word entropy:");
         printBits(entropy16, 4);
 
-        String[] words24 = null;
-        String[] words12 = null;
+        String[] words24;
+        String[] words12;
 
         try {
             words24 = MnemonicGenerator.createMnemonic(entropy32);
