@@ -5,7 +5,7 @@ plugins {
 
 group 'su.knrg.crypto'
 version '0.2.2'
-mainClassName = 'su.knrg.crypto.Main'
+mainClassName = 'su.knst.crypto.Main'
 
 sourceSets {
     main {
