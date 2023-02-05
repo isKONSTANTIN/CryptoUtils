@@ -1,5 +1,7 @@
 package su.knrg.crypto.utils;
 
+import su.knrg.crypto.utils.worldlists.WordLists;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -21,7 +23,7 @@ public class MnemonicGenerator {
         BitSet bits = new BitSet();
 
         for (String word : words) {
-            int index = BIP39.MAP.get(word);
+            int index = WordLists.getActiveList().getIndex(word).orElseThrow();
 
             for (int k = 0; k < 11; k++) {
                 int bitInSet = (11 * wordI) + k;
@@ -79,7 +81,7 @@ public class MnemonicGenerator {
         for (int i = 0; i < ent + cs; i += 11) {
             final int wordIndex = next11Bits(entropyWithChecksum, i);
 
-            words[i / 11] = BIP39.ARRAY[wordIndex];
+            words[i / 11] = WordLists.getActiveList().getWord(wordIndex).orElseThrow();
         }
 
         return words;

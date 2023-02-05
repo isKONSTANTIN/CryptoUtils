@@ -1,21 +1,17 @@
 package su.knrg.crypto.command.commands.seed;
 
 import org.jline.builtins.Completers;
-import org.jline.console.impl.ConsoleEngineImpl;
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
-import org.jline.reader.LineReader;
-import org.jline.reader.ParsedLine;
 import su.knrg.crypto.command.Command;
 import su.knrg.crypto.command.CommandResult;
 import su.knrg.crypto.command.ParamsContainer;
 import su.knrg.crypto.command.commands.CommandTag;
-import su.knrg.crypto.utils.BIP39;
 import su.knrg.crypto.utils.args.ArgsTreeBuilder;
+import su.knrg.crypto.utils.worldlists.WordLists;
 
 import java.util.Arrays;
 import java.util.Base64;
-import java.util.List;
 
 import static su.knrg.crypto.command.commands.seed.SeedGeneratorCommand.printBits;
 import static su.knrg.crypto.utils.MnemonicGenerator.fromMnemonic;
@@ -32,9 +28,11 @@ public class SeedToBaseCommand extends Command {
             mnemonic[i] = args.stringV(i).get();
         }
 
+        WordLists.WordList wordList = WordLists.getActiveList();
+
         for (String word : mnemonic) {
-            if (!BIP39.MAP.containsKey(word))
-                return CommandResult.of("'" + word + "' not found in BIP39 list");
+            if (wordList.getIndex(word).isEmpty())
+                return CommandResult.of("'" + word + "' not found in " + wordList.getName() + " list");
         }
 
         byte[] entropy = fromMnemonic(mnemonic);
@@ -68,7 +66,7 @@ public class SeedToBaseCommand extends Command {
 
         Completer completer = (reader, line, candidates) ->
                 candidates.addAll(
-                        Arrays.stream(BIP39.ARRAY)
+                        Arrays.stream(WordLists.getActiveList().getArray())
                                 .filter(s -> s.contains(line.word()))
                                 .map(Candidate::new)
                                 .toList()

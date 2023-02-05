@@ -10,6 +10,7 @@ import su.knrg.crypto.command.CommandResult;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Optional;
 

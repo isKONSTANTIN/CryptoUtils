@@ -10,13 +10,11 @@ import su.knrg.crypto.command.commands.keys.ECDHEKeyGeneratorCommand;
 import su.knrg.crypto.command.commands.keys.RSAKeyGeneratorCommand;
 import su.knrg.crypto.command.commands.qr.CodeCommand;
 import su.knrg.crypto.command.commands.qr.ErrorCorrectionLevelsCommand;
-import su.knrg.crypto.command.commands.seed.SeedECDHECipherCommand;
-import su.knrg.crypto.command.commands.seed.SeedGeneratorCommand;
-import su.knrg.crypto.command.commands.seed.SeedRSACipherCommand;
-import su.knrg.crypto.command.commands.seed.SeedToBaseCommand;
+import su.knrg.crypto.command.commands.seed.*;
 import su.knrg.crypto.command.commands.shamir.ShamirCommand;
 import su.knrg.crypto.utils.codes.SimplePDF417Worker;
 import su.knrg.crypto.utils.codes.SimpleQRCodeWorker;
+import su.knrg.crypto.utils.worldlists.WordLists;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -26,6 +24,8 @@ public class Main {
     protected static TerminalWorker terminalWorker;
     protected static Path currentPath = Path.of("./").toAbsolutePath();
     Main() {
+        WordLists.preload();
+
         handler.addTagManually(CommandTag.MISC);
         handler.addTagManually(CommandTag.CRYPTOCURRENCIES);
         handler.addTagManually(CommandTag.CRYPTOGRAPHY);
@@ -38,10 +38,13 @@ public class Main {
 
         handler.registerCommand("seed", new SeedGeneratorCommand());
         handler.registerCommand("seed_to_base", new SeedToBaseCommand());
+        handler.registerCommand("wordlist", new WordListCommand());
+
         handler.registerCommand("rsa_key", new RSAKeyGeneratorCommand());
         handler.registerCommand("ecdhe_key", new ECDHEKeyGeneratorCommand());
         handler.registerCommand("seed_rsa_cipher", new SeedRSACipherCommand());
         handler.registerCommand("seed_ecdhe_cipher", new SeedECDHECipherCommand());
+
         handler.registerCommand("qr", new CodeCommand(new SimpleQRCodeWorker()));
         handler.registerCommand("pdf417", new CodeCommand(new SimplePDF417Worker()));
         handler.registerCommand("ecl", new ErrorCorrectionLevelsCommand());
