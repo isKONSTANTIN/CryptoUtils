@@ -39,6 +39,7 @@ public class Main {
 
         handler.registerCommand("seed", new SeedGeneratorCommand());
         handler.registerCommand("seed_to_base", new SeedToBaseCommand());
+        handler.registerCommand("extend_seed", new SeedExtenderCommand());
         handler.registerCommand("wordlist", new WordListCommand());
 
         handler.registerCommand("rsa_key", new RSAKeyGeneratorCommand());

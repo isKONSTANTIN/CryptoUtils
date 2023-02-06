@@ -5,7 +5,7 @@ import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
-import su.knst.crypto.utils.MnemonicGenerator;
+import su.knst.crypto.utils.MnemonicUtils;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
 import java.security.NoSuchAlgorithmException;
@@ -20,7 +20,11 @@ public class SeedGeneratorCommand extends Command {
     public CommandResult run(ParamsContainer args) {
         Optional<String> oBase64 = args.stringV(0);
 
-        return oBase64.isPresent() ? run(Base64.getDecoder().decode(oBase64.get())) : run();
+        try {
+            return oBase64.isPresent() ? run(Base64.getDecoder().decode(oBase64.get())) : run();
+        }catch (IllegalArgumentException e) {
+            return CommandResult.of("Failed to run: " + e.getMessage());
+        }
     }
 
     public CommandResult run() {
@@ -33,34 +37,34 @@ public class SeedGeneratorCommand extends Command {
     }
 
     @SuppressWarnings("SameReturnValue")
-    public CommandResult run(byte[] entropy32) {
-        byte[] entropy16 = Arrays.copyOfRange(entropy32, 0, 16);
+    public CommandResult run(byte[] entropy) {
+        System.out.println("Source entropy:");
+        printBits(entropy, 4);
+        System.out.println("\nBase64 encoded: " + Base64.getEncoder().encodeToString(entropy));
 
-        System.out.println("!!! [CONFIDENTIALLY] !!!");
-
-        System.out.println("\nsource entropy:");
-        printBits(entropy32, 4);
-        System.out.println("base-64 encoded: " + Base64.getEncoder().encodeToString(entropy32));
-
-        System.out.println("\n12-word entropy:");
-        printBits(entropy16, 4);
-
-        String[] words24;
-        String[] words12;
-
-        try {
-            words24 = MnemonicGenerator.createMnemonic(entropy32);
-            words12 = MnemonicGenerator.createMnemonic(entropy16);
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
+        if (entropy.length >= 32) {
+            try {
+                System.out.println("\n24-word seed:");
+                printSeed(MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 32)));
+            }catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
         }
 
-        System.out.println("\n12-word seed:");
-        printSeed(words12);
+        if (entropy.length >= 16) {
+            try {
+                System.out.println("\n12-word seed:");
+                printSeed(MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 16)));
+            }catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+        }
 
-        System.out.println("\n24-word seed:");
-        printSeed(words24);
-
+        if (entropy.length < 16) {
+            System.out.println("Not enough source entropy!");
+            System.out.println("Given: " + entropy.length + " bytes");
+            System.out.println("Min: 16 bytes");
+        }
 
         return CommandResult.VOID;
     }

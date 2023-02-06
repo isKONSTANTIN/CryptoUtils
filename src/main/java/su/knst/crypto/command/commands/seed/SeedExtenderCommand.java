@@ -7,25 +7,27 @@ import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.MnemonicUtils;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 import su.knst.crypto.utils.exceptions.WrongMnemonicException;
 import su.knst.crypto.utils.worldlists.WordLists;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Base64;
 
 import static su.knst.crypto.command.commands.seed.SeedGeneratorCommand.printBits;
 import static su.knst.crypto.utils.MnemonicUtils.*;
 
-public class SeedToBaseCommand extends Command {
+public class SeedExtenderCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
-        String[] mnemonic = new String[args.size()];
+        if (args.size() != 12)
+            return CommandResult.of("Wrong mnemonic size", true);
 
-        for (int i = 0; i < mnemonic.length; i++) {
+        String[] mnemonic = new String[12];
+
+        for (int i = 0; i < args.size(); i++)
             mnemonic[i] = args.stringV(i).orElseThrow();
-        }
 
         try {
             checkMnemonic(mnemonic);
@@ -37,24 +39,26 @@ public class SeedToBaseCommand extends Command {
 
         System.out.println("Source entropy:");
         printBits(entropy, 4);
-        System.out.println("\nBase64 encoded: " + Base64.getEncoder().encodeToString(entropy));
 
-        return CommandResult.VOID;
+        byte[] hash;
+        try {
+            hash = MnemonicUtils.sha256(entropy);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        entropy = Arrays.copyOf(entropy, 32);
+
+        System.arraycopy(hash, 0, entropy, 16, 16);
+
+        System.out.println("\nExtended entropy:");
+        printBits(entropy, 4);
+
+        return this.handler.getCommand("seed", SeedGeneratorCommand.class).run(entropy);
     }
 
     @Override
     public String description() {
-        return "Transform seed words to base64 entropy without checksum";
-    }
-
-    @Override
-    public String args() {
-        return "<word_1> <word_2> ...";
-    }
-
-    @Override
-    public CommandTag tag() {
-        return CommandTag.CRYPTOCURRENCIES;
+        return "Extend 12-word to 24-word seed by putting hash sum at entropy";
     }
 
     @Override
@@ -70,9 +74,19 @@ public class SeedToBaseCommand extends Command {
                                 .toList()
                 );
 
-        for(int i = 0; i < 24; i++)
+        for(int i = 0; i < 12; i++)
             builder.addCompleter(completer);
 
         return builder.parent().build();
+    }
+
+    @Override
+    public CommandTag tag() {
+        return CommandTag.CRYPTOCURRENCIES;
+    }
+
+    @Override
+    public String args() {
+        return "<word_1> <word_2> ...";
     }
 }
