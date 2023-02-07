@@ -24,7 +24,7 @@ public class Main {
     protected static TerminalWorker terminalWorker;
     protected static Path currentPath = Path.of("./").toAbsolutePath();
 
-    Main() {
+    public Main() {
         WordLists.preload();
 
         handler.addTagManually(CommandTag.MISC);
@@ -60,6 +60,14 @@ public class Main {
         terminalWorker.stop();
     }
 
+    public CommandHandler getHandler() {
+        return handler;
+    }
+
+    public static TerminalWorker getTerminalWorker() {
+        return terminalWorker;
+    }
+
     public static Path getCurrentPath() {
         return currentPath;
     }
@@ -72,7 +80,7 @@ public class Main {
         currentPath = newPath;
     }
 
-    void start() {
+    public void start() {
         try {
             terminalWorker.start();
         } catch (IOException e) {

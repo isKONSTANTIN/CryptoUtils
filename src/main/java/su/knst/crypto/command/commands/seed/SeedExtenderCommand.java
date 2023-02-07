@@ -53,7 +53,7 @@ public class SeedExtenderCommand extends Command {
         System.out.println("\nExtended entropy:");
         printBits(entropy, 4);
 
-        return this.handler.getCommand("seed", SeedGeneratorCommand.class).run(entropy);
+        return this.handler.getCommand("seed", SeedGeneratorCommand.class).orElseThrow().run(entropy);
     }
 
     @Override

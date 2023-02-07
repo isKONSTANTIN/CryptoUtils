@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 public class HexCommand extends Command {
-    private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+    public static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
 
     @Override
     public CommandResult run(ParamsContainer args) {

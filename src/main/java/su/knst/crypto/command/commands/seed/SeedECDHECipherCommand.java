@@ -88,7 +88,7 @@ public class SeedECDHECipherCommand extends Command {
         }
 
         if (!mode)
-            return this.handler.getCommand("seed", SeedGeneratorCommand.class).run(result);
+            return this.handler.getCommand("seed", SeedGeneratorCommand.class).orElseThrow().run(result);
 
         return CommandResult.of("Successful! Result:\n" + Base64.getEncoder().encodeToString(result));
     }

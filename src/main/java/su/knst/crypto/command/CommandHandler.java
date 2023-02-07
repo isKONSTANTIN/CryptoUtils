@@ -53,13 +53,20 @@ public class CommandHandler {
             commandsNamesByTag.put(tag, new ArrayList<>());
     }
 
-    public <T extends Command> T getCommand(String alias, Class<T> tClass) {
+    public <T extends Command> Optional<T> getCommand(String alias, Class<T> tClass) {
         Command command = commands.get(alias);
 
         if (!tClass.isInstance(command))
-            return null;
+            return Optional.empty();
 
-        return tClass.cast(command);
+        return Optional.of(tClass.cast(command));
+    }
+
+    public <T extends Command> Optional<T> getCommand(Class<T> tClass) {
+        return commands.values().stream()
+                .filter(tClass::isInstance)
+                .map(tClass::cast)
+                .findFirst();
     }
 
     public Map<String, Command> getCommands() {

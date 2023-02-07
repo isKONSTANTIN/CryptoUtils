@@ -24,6 +24,9 @@ repositories {
 }
 
 dependencies {
+    testImplementation(platform('org.junit:junit-bom:5.9.2'))
+    testImplementation('org.junit.jupiter:junit-jupiter')
+
     include group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.70'
 
     include group: 'com.google.zxing', name: 'core', version: '3.3.0'
@@ -41,6 +44,10 @@ java {
     toolchain {
         languageVersion.set(JavaLanguageVersion.of(17))
     }
+}
+
+test {
+    useJUnitPlatform()
 }
 
 jar {
