@@ -81,7 +81,6 @@ public class SeedECDHECipherCommand extends Command {
         try {
             result = mode ? SimpleECDHE.encrypt(secretKey, entropy) : SimpleECDHE.decrypt(secretKey, entropy);
         } catch (GeneralSecurityException e) {
-            System.err.println("Error:");
             e.printStackTrace();
 
             return CommandResult.of("Failed", true);
@@ -92,8 +91,6 @@ public class SeedECDHECipherCommand extends Command {
 
         return CommandResult.of("Successful! Result:\n" + Base64.getEncoder().encodeToString(result));
     }
-
-
 
     @Override
     public String description() {

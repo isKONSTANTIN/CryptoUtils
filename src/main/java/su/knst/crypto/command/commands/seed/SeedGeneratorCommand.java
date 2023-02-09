@@ -3,6 +3,7 @@ package su.knst.crypto.command.commands.seed;
 import org.jline.builtins.Completers;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.CommandResultBuilder;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.MnemonicUtils;
@@ -36,16 +37,22 @@ public class SeedGeneratorCommand extends Command {
         return run(entropy32);
     }
 
-    @SuppressWarnings("SameReturnValue")
     public CommandResult run(byte[] entropy) {
-        System.out.println("Source entropy:");
-        printBits(entropy, 4);
-        System.out.println("\nBase64 encoded: " + Base64.getEncoder().encodeToString(entropy));
+        CommandResultBuilder resultBuilder = CommandResultBuilder.builder();
+
+        resultBuilder
+                .line("Source entropy:").line()
+                .line(formatBits(entropy, 4))
+                .line("Base64 encoded: " + Base64.getEncoder().encodeToString(entropy));
 
         if (entropy.length >= 32) {
             try {
-                System.out.println("\n24-word seed:");
-                printSeed(MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 32)));
+                resultBuilder
+                        .line()
+                        .line("24-word seed:")
+                        .line(formatMnemonic(
+                                MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 32))
+                        ));
             }catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }
@@ -53,23 +60,29 @@ public class SeedGeneratorCommand extends Command {
 
         if (entropy.length >= 16) {
             try {
-                System.out.println("\n12-word seed:");
-                printSeed(MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 16)));
+                resultBuilder
+                        .line()
+                        .line("12-word seed:")
+                        .line(formatMnemonic(
+                                MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 16))
+                        ));
             }catch (NoSuchAlgorithmException e) {
                 e.printStackTrace();
             }
         }
 
         if (entropy.length < 16) {
-            System.out.println("Not enough source entropy!");
-            System.out.println("Given: " + entropy.length + " bytes");
-            System.out.println("Min: 16 bytes");
+            resultBuilder.error()
+                    .line()
+                    .line("Not enough source entropy!")
+                    .line("Given: " + entropy.length + " bytes")
+                    .line("Min: 16 bytes");
         }
 
-        return CommandResult.VOID;
+        return resultBuilder.build();
     }
 
-    public static void printSeed(String[] words) {
+    public static String formatMnemonic(String[] words) {
         StringBuilder list = new StringBuilder();
         StringBuilder line = new StringBuilder();
 
@@ -84,21 +97,25 @@ public class SeedGeneratorCommand extends Command {
             line.append(words[i]).append(" ");
         }
 
-        System.out.println(list);
-        System.out.println(line);
+        return list.append("\n").append(line).toString();
     }
 
-    public static void printBits(byte[] bytes, int gap) {
-        int i = 1;
+    public static String formatBits(byte[] bytes, int bytesInLine) {
+        int i = 0;
+        StringBuilder builder = new StringBuilder();
 
         for (byte b : bytes) {
-            System.out.print(String.format("%8s", Integer.toBinaryString(b & 0xFF)).replace(' ', '0') + " ");
-
-            if (i % gap == 0)
-                System.out.print("\n");
-
             i++;
+
+            builder.append(String.format("%8s", Integer.toBinaryString(b & 0xFF))
+                            .replace(' ', '0'))
+                    .append(" ");
+
+            if (i % bytesInLine == 0)
+                builder.append("\n");
         }
+
+        return builder.toString();
     }
 
     @Override

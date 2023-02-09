@@ -6,6 +6,7 @@ import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
 import java.io.IOException;
@@ -14,8 +15,6 @@ import java.nio.file.Path;
 import java.util.Optional;
 
 public class HexCommand extends Command {
-    public static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
-
     @Override
     public CommandResult run(ParamsContainer args) {
         Optional<String> oMode = args.stringV(0);
@@ -50,7 +49,7 @@ public class HexCommand extends Command {
             }
 
             try {
-                Files.writeString(oResult.get(), bytesToHex(bytes));
+                Files.writeString(oResult.get(), HexUtils.bytesToHex(bytes));
             } catch (IOException e) {
                 e.printStackTrace();
 
@@ -68,7 +67,7 @@ public class HexCommand extends Command {
             }
 
             try {
-                Files.write(oResult.get(), hexStringToByteArray(hex));
+                Files.write(oResult.get(), HexUtils.hexStringToByteArray(hex));
             } catch (IOException e) {
                 e.printStackTrace();
 
@@ -79,25 +78,7 @@ public class HexCommand extends Command {
         return CommandResult.of("Done!");
     }
 
-    protected static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-        return new String(hexChars);
-    }
 
-    protected static byte[] hexStringToByteArray(String s) {
-        int len = s.length();
-        byte[] data = new byte[len / 2];
-        for (int i = 0; i < len; i += 2) {
-            data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
-                    + Character.digit(s.charAt(i+1), 16));
-        }
-        return data;
-    }
 
     @Override
     public String description() {

@@ -1,10 +1,11 @@
-package su.knst.crypto.command.commands.shamir;
+package su.knst.crypto.tests.integration.shamir;
 
 import org.junit.jupiter.api.*;
 import su.knst.crypto.Main;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
-import su.knst.crypto.utils.MnemonicUtils;
+import su.knst.crypto.command.commands.shamir.ShamirCommand;
+import su.knst.crypto.utils.HexUtils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -16,10 +17,10 @@ import java.util.*;
 import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static su.knst.crypto.command.commands.hex.HexCommand.HEX_ARRAY;
+import static su.knst.crypto.utils.HexUtils.hexHash;
 
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-class ShamirCommandTest {
+class ShamirTest {
 
     static Main main;
 
@@ -27,25 +28,11 @@ class ShamirCommandTest {
     public static final int PARTS_FOR_RECOVER = 3;
 
     public static final Path TEST_FILE_PATH = Path.of("test_file");
-    public static final Path TEST_JOINED_FILE_PATH = Path.of("test_file-joined");
+    public static final Path TEST_JOINED_FILE_PATH = Path.of("test_file_joined");
 
     static String testFileHash;
 
     static SecureRandom random = new SecureRandom();
-
-    static String hash(byte[] bytes) throws NoSuchAlgorithmException {
-        return bytesToHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-    }
-
-    public static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-        return new String(hexChars);
-    }
 
     @BeforeAll
     static void setUp() throws IOException, NoSuchAlgorithmException {
@@ -56,7 +43,7 @@ class ShamirCommandTest {
 
         Files.write(TEST_FILE_PATH, randomBytes);
 
-        testFileHash = hash(randomBytes);
+        testFileHash = hexHash(randomBytes);
     }
 
     // Just split file of random bytes
@@ -101,7 +88,7 @@ class ShamirCommandTest {
         CommandResult result = shamirCommand.run(new ParamsContainer(args));
 
         assertFalse(result.error());
-        assertEquals(testFileHash, hash(Files.readAllBytes(TEST_JOINED_FILE_PATH)));
+        assertEquals(testFileHash, hexHash(Files.readAllBytes(TEST_JOINED_FILE_PATH)));
     }
 
     @AfterAll

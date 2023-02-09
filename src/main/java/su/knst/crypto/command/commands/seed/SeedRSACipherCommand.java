@@ -56,9 +56,10 @@ public class SeedRSACipherCommand extends Command {
 
         try {
             result = mode ? SimpleRSA.encrypt((PublicKey) key, entropy) : SimpleRSA.decrypt((PrivateKey) key, entropy);
-        } catch (NoSuchPaddingException | InvalidKeyException | NoSuchAlgorithmException | IllegalBlockSizeException | BadPaddingException e) {
-            System.err.println("Error:");
-            throw new RuntimeException(e);
+        } catch (GeneralSecurityException e) {
+            e.printStackTrace();
+
+            return CommandResult.error("Failed");
         }
 
         if (!mode)

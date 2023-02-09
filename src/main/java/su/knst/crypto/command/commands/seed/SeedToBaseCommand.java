@@ -5,6 +5,7 @@ import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.CommandResultBuilder;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
@@ -15,7 +16,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Base64;
 
-import static su.knst.crypto.command.commands.seed.SeedGeneratorCommand.printBits;
+import static su.knst.crypto.command.commands.seed.SeedGeneratorCommand.formatBits;
 import static su.knst.crypto.utils.MnemonicUtils.*;
 
 public class SeedToBaseCommand extends Command {
@@ -35,11 +36,14 @@ public class SeedToBaseCommand extends Command {
 
         byte[] entropy = entropyFromMnemonic(mnemonic);
 
-        System.out.println("Source entropy:");
-        printBits(entropy, 4);
-        System.out.println("\nBase64 encoded: " + Base64.getEncoder().encodeToString(entropy));
+        CommandResultBuilder builder = CommandResultBuilder.builder();
 
-        return CommandResult.VOID;
+        builder.line("Source entropy:")
+                .line(formatBits(entropy, 4))
+                .line()
+                .line("Base64 encoded: " + Base64.getEncoder().encodeToString(entropy));
+
+        return builder.build();
     }
 
     @Override

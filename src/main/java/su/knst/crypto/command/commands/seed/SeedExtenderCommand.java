@@ -5,6 +5,7 @@ import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.CommandResultBuilder;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.MnemonicUtils;
@@ -15,12 +16,13 @@ import su.knst.crypto.utils.worldlists.WordLists;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-import static su.knst.crypto.command.commands.seed.SeedGeneratorCommand.printBits;
+import static su.knst.crypto.command.commands.seed.SeedGeneratorCommand.formatBits;
 import static su.knst.crypto.utils.MnemonicUtils.*;
 
 public class SeedExtenderCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
+
         if (args.size() != 12)
             return CommandResult.of("Wrong mnemonic size", true);
 
@@ -37,8 +39,11 @@ public class SeedExtenderCommand extends Command {
 
         byte[] entropy = entropyFromMnemonic(mnemonic);
 
-        System.out.println("Source entropy:");
-        printBits(entropy, 4);
+        CommandResultBuilder resultBuilder = CommandResultBuilder.builder();
+
+        resultBuilder
+                .line("Source entropy:")
+                .line(formatBits(entropy, 4));
 
         byte[] hash;
         try {
@@ -50,10 +55,17 @@ public class SeedExtenderCommand extends Command {
 
         System.arraycopy(hash, 0, entropy, 16, 16);
 
-        System.out.println("\nExtended entropy:");
-        printBits(entropy, 4);
+        resultBuilder.line()
+                .line("Extended entropy:")
+                .line(formatBits(entropy, 4))
+                .line();
 
-        return this.handler.getCommand("seed", SeedGeneratorCommand.class).orElseThrow().run(entropy);
+        CommandResult seed = this.handler
+                .getCommand("seed", SeedGeneratorCommand.class)
+                .orElseThrow()
+                .run(entropy);
+
+        return resultBuilder.merge(seed).build();
     }
 
     @Override
