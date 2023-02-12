@@ -26,23 +26,23 @@ public class SeedECDHECipherCommand extends Command {
         Optional<String> oEntropy = args.stringV(3);
 
         if (oMode.isEmpty() || oPublicKey.isEmpty() || oPrivateKey.isEmpty() || oEntropy.isEmpty())
-            return CommandResult.of("Some argument not set", true);
+            return CommandResult.error("Some argument not set");
 
         if (!(oMode.get().equals("encrypt") || oMode.get().equals("decrypt")))
-            return CommandResult.of("Mode must be 'encrypt' or 'decrypt'", true);
+            return CommandResult.error("Mode must be 'encrypt' or 'decrypt'");
 
         byte[] pubKey;
         try {
             pubKey = Files.readAllBytes(oPublicKey.get());
         } catch (Exception e) {
-            return CommandResult.of("Failed to read public key from file!", true);
+            return CommandResult.error("Failed to read public key from file!");
         }
 
         byte[] secKey;
         try {
             secKey = Files.readAllBytes(oPrivateKey.get());
         } catch (Exception e) {
-            return CommandResult.of("Failed to read private key from file!", true);
+            return CommandResult.error("Failed to read private key from file!");
         }
 
         return run(oMode.get().equals("encrypt"), pubKey, secKey, Base64.getDecoder().decode(oEntropy.get()));
@@ -58,7 +58,7 @@ public class SeedECDHECipherCommand extends Command {
         } catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
 
-            return CommandResult.of("Public key not valid", true);
+            return CommandResult.error("Public key not valid");
         }
 
         try {
@@ -66,7 +66,7 @@ public class SeedECDHECipherCommand extends Command {
         } catch (NoSuchProviderException | NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
 
-            return CommandResult.of("Private key not valid", true);
+            return CommandResult.error("Private key not valid");
         }
 
         try {
@@ -74,7 +74,7 @@ public class SeedECDHECipherCommand extends Command {
         } catch (InvalidKeyException | NoSuchAlgorithmException | NoSuchProviderException e) {
             e.printStackTrace();
 
-            return CommandResult.of("Secret key failed", true);
+            return CommandResult.error("Secret key failed");
         }
         byte[] result;
 
@@ -83,7 +83,7 @@ public class SeedECDHECipherCommand extends Command {
         } catch (GeneralSecurityException e) {
             e.printStackTrace();
 
-            return CommandResult.of("Failed", true);
+            return CommandResult.error("Failed");
         }
 
         if (!mode)

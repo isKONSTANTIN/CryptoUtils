@@ -24,7 +24,7 @@ public class SeedExtenderCommand extends Command {
     public CommandResult run(ParamsContainer args) {
 
         if (args.size() != 12)
-            return CommandResult.of("Wrong mnemonic size", true);
+            return CommandResult.error("Wrong mnemonic size");
 
         String[] mnemonic = new String[12];
 

@@ -24,7 +24,7 @@ public class SeedGeneratorCommand extends Command {
         try {
             return oBase64.isPresent() ? run(Base64.getDecoder().decode(oBase64.get())) : run();
         }catch (IllegalArgumentException e) {
-            return CommandResult.of("Failed to run: " + e.getMessage());
+            return CommandResult.error("Failed to run: " + e.getMessage());
         }
     }
 

@@ -13,6 +13,6 @@ public record CommandResult(String message, boolean error) {
         return of(message, true);
     }
 
-    public static final CommandResult COMMAND_NOT_FOUND = CommandResult.of("Command not found", true);
+    public static final CommandResult COMMAND_NOT_FOUND = CommandResult.error("Command not found");
     public static final CommandResult VOID = CommandResult.of("");
 }

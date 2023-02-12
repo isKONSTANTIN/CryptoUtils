@@ -20,20 +20,20 @@ public class HexCommand extends Command {
         Optional<String> oMode = args.stringV(0);
 
         if (oMode.isEmpty())
-            return CommandResult.of("Mode not set", true);
+            return CommandResult.error("Mode not set");
 
         if (!(oMode.get().equals("encode") || oMode.get().equals("decode")))
-            return CommandResult.of("Mode must be 'encode' or 'decode'", true);
+            return CommandResult.error("Mode must be 'encode' or 'decode'");
 
         Optional<Path> oSource = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (oSource.isEmpty())
-            return CommandResult.of("Source path not set", true);
+            return CommandResult.error("Source path not set");
 
         Optional<Path> oResult = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (oResult.isEmpty())
-            return CommandResult.of("Result path not set", true);
+            return CommandResult.error("Result path not set");
 
         boolean mode = oMode.map((s) -> s.equals("encode")).get();
 
@@ -45,7 +45,7 @@ public class HexCommand extends Command {
             } catch (IOException e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed to read source file", true);
+                return CommandResult.error("Failed to read source file");
             }
 
             try {
@@ -53,7 +53,7 @@ public class HexCommand extends Command {
             } catch (IOException e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed to write result file", true);
+                return CommandResult.error("Failed to write result file");
             }
         }else {
             String hex;
@@ -63,7 +63,7 @@ public class HexCommand extends Command {
             } catch (IOException e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed to read source file", true);
+                return CommandResult.error("Failed to read source file");
             }
 
             try {
@@ -71,7 +71,7 @@ public class HexCommand extends Command {
             } catch (IOException e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed to write result file", true);
+                return CommandResult.error("Failed to write result file");
             }
         }
 

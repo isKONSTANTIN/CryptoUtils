@@ -17,12 +17,12 @@ public class WordListCommand extends Command {
         Optional<String> oName = args.stringV(1);
 
         if (oMode.isEmpty() || !(oMode.get().equals("list") || oMode.get().equals("set")))
-            return CommandResult.of("Mode must be 'list' or 'set'", true);
+            return CommandResult.error("Mode must be 'list' or 'set'");
 
         boolean mode = oMode.map(m -> m.equals("list")).get();
 
         if (!mode && oName.isEmpty())
-            return CommandResult.of("List name not set", true);
+            return CommandResult.error("List name not set");
 
         return mode ? list() : setList(oName.get());
     }
@@ -39,7 +39,7 @@ public class WordListCommand extends Command {
         WordLists.WordList newWordList = WordLists.setActiveList(name);
 
         if (newWordList == null)
-            return CommandResult.of("List not found", true);
+            return CommandResult.error("List not found");
 
         return CommandResult.of("Now wordlist is '" + newWordList.name() + "'");
     }

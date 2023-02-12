@@ -23,10 +23,10 @@ public class ShamirCommand extends Command {
         Optional<String> oMode = args.stringV(0);
 
         if (oMode.isEmpty())
-            return CommandResult.of("Mode not set", true);
+            return CommandResult.error("Mode not set");
 
         if (!(oMode.get().equals("split") || oMode.get().equals("join")))
-            return CommandResult.of("Mode must be 'split' or 'join'", true);
+            return CommandResult.error("Mode must be 'split' or 'join'");
 
         boolean mode = oMode.map((s) -> s.equals("split")).get();
 
@@ -34,17 +34,17 @@ public class ShamirCommand extends Command {
             Optional<Integer> oAllParts = args.intV(1);
 
             if (oAllParts.isEmpty())
-                return CommandResult.of("All parts not set", true);
+                return CommandResult.error("All parts not set");
 
             Optional<Integer> oForRecover = args.intV(2);
 
             if (oForRecover.isEmpty())
-                return CommandResult.of("Parts for recover not set", true);
+                return CommandResult.error("Parts for recover not set");
 
             Optional<Path> oPath = args.stringV(3).map((p) -> Main.getCurrentPath().resolve(p));
 
             if (oPath.isEmpty())
-                return CommandResult.of("Path not set", true);
+                return CommandResult.error("Path not set");
 
             byte[] data;
 
@@ -53,7 +53,7 @@ public class ShamirCommand extends Command {
             } catch (IOException e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed to read file", true);
+                return CommandResult.error("Failed to read file");
             }
 
             String filename = oPath.get().toFile().getName()
@@ -68,13 +68,13 @@ public class ShamirCommand extends Command {
             }catch (Exception e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed to write files", true);
+                return CommandResult.error("Failed to write files");
             }
         }else {
             Optional<Path> oResultPath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
 
             if (oResultPath.isEmpty())
-                return CommandResult.of("Result path not set", true);
+                return CommandResult.error("Result path not set");
 
             HashMap<Integer, byte[]> parts = new HashMap<>();
 
@@ -90,7 +90,7 @@ public class ShamirCommand extends Command {
             } catch (IOException e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed to read files", true);
+                return CommandResult.error("Failed to read files");
             }
 
             Scheme scheme = new Scheme(new SecureRandom(), 5, 4);
@@ -100,7 +100,7 @@ public class ShamirCommand extends Command {
             } catch (IOException e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed to write result", true);
+                return CommandResult.error("Failed to write result");
             }
         }
 

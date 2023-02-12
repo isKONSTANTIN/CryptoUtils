@@ -27,16 +27,16 @@ public class SeedRSACipherCommand extends Command {
         Optional<Path> oKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (oMode.isEmpty() || oKey.isEmpty() || oEntropy.isEmpty())
-            return CommandResult.of("Some argument not set", true);
+            return CommandResult.error("Some argument not set");
 
         if (!(oMode.get().equals("encrypt") || oMode.get().equals("decrypt")))
-            return CommandResult.of("Mode must be 'encrypt' or 'decrypt'", true);
+            return CommandResult.error("Mode must be 'encrypt' or 'decrypt'");
 
         byte[] key;
         try {
             key = Files.readAllBytes(oKey.get());
         } catch (Exception e) {
-            return CommandResult.of("Failed to read key from file!", true);
+            return CommandResult.error("Failed to read key from file!");
         }
 
         return run(oMode.get().equals("encrypt"), key, Base64.getDecoder().decode(oEntropy.get()));
@@ -49,7 +49,7 @@ public class SeedRSACipherCommand extends Command {
             key = mode ? SimpleRSA.getPublicKey(bytesKey) : SimpleRSA.getPrivateKey(bytesKey);
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
             e.printStackTrace();
-            return CommandResult.of("Key not valid", true);
+            return CommandResult.error("Key not valid");
         }
 
         byte[] result;

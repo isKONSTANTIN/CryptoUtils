@@ -21,7 +21,7 @@ public class ECDHEKeyGeneratorCommand extends Command {
         Optional<Path> privatePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (publicPath.isEmpty() || privatePath.isEmpty())
-            return CommandResult.of("Some argument not set", true);
+            return CommandResult.error("Some argument not set");
 
         return run(publicPath.get(), privatePath.get());
     }

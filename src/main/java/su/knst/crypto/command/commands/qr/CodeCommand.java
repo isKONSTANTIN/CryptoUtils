@@ -31,10 +31,10 @@ public class CodeCommand extends Command {
         Optional<String> oMode = args.stringV(0);
 
         if (oMode.isEmpty())
-            return CommandResult.of("Mode not set", true);
+            return CommandResult.error("Mode not set");
 
         if (!(oMode.get().equals("scan") || oMode.get().equals("generate")))
-            return CommandResult.of("Mode must be 'scan' or 'generate'", true);
+            return CommandResult.error("Mode must be 'scan' or 'generate'");
 
         boolean mode = oMode.map((s) -> s.equals("scan")).get();
 
@@ -42,7 +42,7 @@ public class CodeCommand extends Command {
             Optional<String> oQRCodePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
             if (oQRCodePath.isEmpty())
-                return CommandResult.of("QR code path not set", true);
+                return CommandResult.error("QR code path not set");
 
             Optional<Path> oResultPath = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
 
@@ -54,7 +54,7 @@ public class CodeCommand extends Command {
             } catch (Exception e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Fail to scan", true);
+                return CommandResult.error("Fail to scan");
             }
 
             if (oResultPath.isPresent()) {
@@ -63,7 +63,7 @@ public class CodeCommand extends Command {
                 } catch (IOException e) {
                     e.printStackTrace();
 
-                    return CommandResult.of("Fail to write result: " + result, true);
+                    return CommandResult.error("Fail to write result: " + result);
                 }
             }else {
                 return CommandResult.of(result);
@@ -74,17 +74,17 @@ public class CodeCommand extends Command {
             Optional<String> oQRCodePath = args.stringV(argIndex++).map((p) -> Main.getCurrentPath().resolve(p).toString());
 
             if (oQRCodePath.isEmpty())
-                return CommandResult.of("QR code path not set", true);
+                return CommandResult.error("QR code path not set");
 
             Optional<Integer> oPixels = args.intV(argIndex++);
 
             if (oPixels.isEmpty())
-                return CommandResult.of("Pixels width not set", true);
+                return CommandResult.error("Pixels width not set");
 
             Optional<String> oData = args.stringV(argIndex++);
 
             if (oData.isEmpty())
-                return CommandResult.of("Text or path not set", true);
+                return CommandResult.error("Text or path not set");
 
             String startData = oData.get();
 
@@ -96,7 +96,7 @@ public class CodeCommand extends Command {
                 oData = args.stringV(argIndex++);
 
                 if (oData.isEmpty())
-                    return CommandResult.of("Text or path not set", true);
+                    return CommandResult.error("Text or path not set");
             }
 
             StringBuilder data = new StringBuilder(oData.get());
@@ -121,7 +121,7 @@ public class CodeCommand extends Command {
             } catch (Exception e) {
                 e.printStackTrace();
 
-                return CommandResult.of("Failed", true);
+                return CommandResult.error("Failed");
             }
         }
 

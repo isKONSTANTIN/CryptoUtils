@@ -31,7 +31,7 @@ public class SeedToBaseCommand extends Command {
         try {
             checkMnemonic(mnemonic);
         } catch (WrongMnemonicException | NoSuchAlgorithmException e) {
-            return CommandResult.of("Failed to check mnemonic: " + e.getMessage());
+            return CommandResult.error("Failed to check mnemonic: " + e.getMessage());
         }
 
         byte[] entropy = entropyFromMnemonic(mnemonic);

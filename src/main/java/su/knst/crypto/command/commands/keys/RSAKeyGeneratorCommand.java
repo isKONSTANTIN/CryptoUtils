@@ -22,7 +22,7 @@ public class RSAKeyGeneratorCommand extends Command {
         Optional<Integer> size = args.intV(2);
 
         if (publicPath.isEmpty() || privatePath.isEmpty())
-            return CommandResult.of("Some argument not set", true);
+            return CommandResult.error("Some argument not set");
 
         return run(publicPath.get(), privatePath.get(), size.orElse(2048));
     }
