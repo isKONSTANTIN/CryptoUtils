@@ -3,6 +3,7 @@ package su.knst.crypto;
 import su.knst.crypto.command.CommandHandler;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.command.commands.misc.ChangeDirectoryCommand;
+import su.knst.crypto.command.commands.misc.DeleteCommand;
 import su.knst.crypto.command.commands.misc.ExitCommand;
 import su.knst.crypto.command.commands.misc.HelpCommand;
 import su.knst.crypto.command.commands.hex.HexCommand;
@@ -35,6 +36,7 @@ public class Main {
         handler.registerCommand("help", new HelpCommand());
         handler.registerCommand("exit", new ExitCommand());
         handler.registerCommand("cd", new ChangeDirectoryCommand());
+        handler.registerCommand("delete", new DeleteCommand());
         handler.registerCommand("q", new ExitCommand());
 
         handler.registerCommand("seed", new SeedGeneratorCommand());

@@ -7,10 +7,12 @@ import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import su.knst.crypto.command.CommandHandler;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.utils.TerminalQuestion;
 
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.jline.builtins.Completers.TreeCompleter.node;
@@ -39,6 +41,41 @@ public class TerminalWorker {
         return new TreeCompleter(nodes);
     }
 
+    public Optional<String> ask(TerminalQuestion question) {
+        List<String> answers = question.answers();
+
+        LineReaderBuilder readerBuilder = LineReaderBuilder.builder()
+                .terminal(terminal);
+
+        LineReader reader = readerBuilder.build();
+        writer.println(question.text());
+        writer.println();
+
+        StringBuilder prompt = new StringBuilder();
+
+        if (answers != null) {
+            for (String s : answers)
+                prompt.append(s).append("/");
+
+            prompt.deleteCharAt(prompt.length() - 1);
+        }
+
+        prompt.append("? ");
+
+        String answer = null;
+        while (true) {
+            try {
+                answer = reader.readLine(prompt.toString());
+            } catch (Exception e) {
+                break;
+            }
+
+            if (answers != null && answers.contains(answer))
+                break;
+        }
+
+        return Optional.ofNullable(answer);
+    }
     public void start() throws IOException {
         //Logger.getLogger("org.jline").setLevel(Level.ALL);
 
