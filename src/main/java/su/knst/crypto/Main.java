@@ -1,6 +1,7 @@
 package su.knst.crypto;
 
 import su.knst.crypto.command.CommandHandler;
+import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.command.commands.misc.ChangeDirectoryCommand;
 import su.knst.crypto.command.commands.misc.DeleteCommand;
@@ -88,15 +89,19 @@ public class Main {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        try {
-            terminalWorker.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public static void main(String[] args) {
-        new Main().start();
+        Main main = new Main();
+
+        if (args.length == 0) {
+            main.start();
+            return;
+        }
+
+        CommandResult result = main.getHandler().run(args);
+
+        System.out.println(result.message());
+        System.exit(result.error() ? 1 : 0);
     }
 }

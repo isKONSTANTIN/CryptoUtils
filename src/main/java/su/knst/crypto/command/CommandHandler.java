@@ -13,8 +13,10 @@ public class CommandHandler {
     protected final LinkedHashMap<CommandTag, ArrayList<String>> commandsNamesByTag = new LinkedHashMap<>();
 
     public CommandResult run(String line) {
-        String[] words = line.split(" ");
+        return run(line.split(" "));
+    }
 
+    public CommandResult run(String[] words) {
         Command command = commands.get(words[0]);
 
         if (command == null) {
