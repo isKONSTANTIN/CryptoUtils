@@ -8,6 +8,7 @@ import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 import su.knst.crypto.utils.codes.AbstractCodeWorker;
 
@@ -59,7 +60,7 @@ public class CodeCommand extends Command {
 
             if (oResultPath.isPresent()) {
                 try {
-                    Files.write(oResultPath.get(), Base64.getDecoder().decode(result));
+                    FileUtils.writeOwnerOnly(oResultPath.get(), Base64.getDecoder().decode(result));
                 } catch (IOException e) {
                     e.printStackTrace();
 
@@ -129,6 +130,8 @@ public class CodeCommand extends Command {
     }
 
     public void generate(String resultPath, String text, int pixelsSide, ErrorCorrectionLevel level) throws IOException, WriterException {
+        // create the file with owner-only permissions before the QR image is written into it
+        FileUtils.createOwnerOnly(Path.of(resultPath));
         worker.generateCode(text, resultPath, pixelsSide, pixelsSide, level);
     }
 

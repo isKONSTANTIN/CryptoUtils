@@ -6,6 +6,7 @@ import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
@@ -49,7 +50,7 @@ public class HexCommand extends Command {
             }
 
             try {
-                Files.writeString(oResult.get(), HexUtils.bytesToHex(bytes));
+                FileUtils.writeOwnerOnly(oResult.get(), HexUtils.bytesToHex(bytes));
             } catch (IOException e) {
                 e.printStackTrace();
 
@@ -67,7 +68,7 @@ public class HexCommand extends Command {
             }
 
             try {
-                Files.write(oResult.get(), HexUtils.hexStringToByteArray(hex));
+                FileUtils.writeOwnerOnly(oResult.get(), HexUtils.hexStringToByteArray(hex));
             } catch (IOException e) {
                 e.printStackTrace();
 

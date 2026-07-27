@@ -37,14 +37,22 @@ public class SimpleRSA {
     }
 
     public static byte[] encrypt(PublicKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
-        Cipher encryptCipher = Cipher.getInstance("RSA");
+        Cipher encryptCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
         encryptCipher.init(Cipher.ENCRYPT_MODE, key);
 
         return encryptCipher.doFinal(data);
     }
 
     public static byte[] decrypt(PrivateKey key, byte[] eData) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
-        Cipher decryptCipher = Cipher.getInstance("RSA");
+        Cipher decryptCipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+        decryptCipher.init(Cipher.DECRYPT_MODE, key);
+
+        return decryptCipher.doFinal(eData);
+    }
+
+    // Reads backups encrypted by versions before the switch to OAEP padding
+    public static byte[] decryptLegacy(PrivateKey key, byte[] eData) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
+        Cipher decryptCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
         decryptCipher.init(Cipher.DECRYPT_MODE, key);
 
         return decryptCipher.doFinal(eData);

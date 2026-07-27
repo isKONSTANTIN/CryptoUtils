@@ -7,6 +7,7 @@ import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
 import java.io.IOException;
@@ -64,7 +65,7 @@ public class ShamirCommand extends Command {
 
             try {
                 for (Map.Entry<Integer, byte[]> entry : parts.entrySet())
-                    Files.write(Path.of(filename + ".shp-" + entry.getKey()), entry.getValue());
+                    FileUtils.writeOwnerOnly(Path.of(filename + ".shp-" + entry.getKey()), entry.getValue());
             }catch (Exception e) {
                 e.printStackTrace();
 
@@ -96,7 +97,7 @@ public class ShamirCommand extends Command {
             Scheme scheme = new Scheme(new SecureRandom(), 5, 4);
 
             try {
-                Files.write(oResultPath.get(), scheme.join(parts));
+                FileUtils.writeOwnerOnly(oResultPath.get(), scheme.join(parts));
             } catch (IOException e) {
                 e.printStackTrace();
 

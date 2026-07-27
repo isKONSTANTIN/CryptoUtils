@@ -7,7 +7,9 @@ import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.keys.RSAKeyGeneratorCommand;
 import su.knst.crypto.command.commands.seed.SeedGeneratorCommand;
 import su.knst.crypto.command.commands.seed.SeedRSACipherCommand;
+import su.knst.crypto.utils.SimpleRSA;
 
+import javax.crypto.Cipher;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -40,7 +42,7 @@ class RSATest {
 
     @Test
     @Order(1)
-    void genKeys() {
+    void genKeys() throws IOException {
         RSAKeyGeneratorCommand keyGeneratorCommand = main.getHandler().getCommand(RSAKeyGeneratorCommand.class).orElseThrow();
 
         CommandResult result = keyGeneratorCommand.run(
@@ -51,6 +53,11 @@ class RSATest {
         );
 
         assertFalse(result.error());
+
+        if (PUB_KEY_FILE_PATH.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+            assertEquals("rw-------", java.nio.file.attribute.PosixFilePermissions.toString(Files.getPosixFilePermissions(PUB_KEY_FILE_PATH)));
+            assertEquals("rw-------", java.nio.file.attribute.PosixFilePermissions.toString(Files.getPosixFilePermissions(SEC_KEY_FILE_PATH)));
+        }
     }
 
     @Test
@@ -95,6 +102,35 @@ class RSATest {
         assertFalse(view.error());
 
         assertEquals(decryptedSeedResult, view.message());
+    }
+
+    @Test
+    @Order(5)
+    void decryptOld() throws Exception {
+        SeedRSACipherCommand cipherCommand = main.getHandler().getCommand(SeedRSACipherCommand.class).orElseThrow();
+
+        java.security.KeyPair keyPair = SimpleRSA.generateKeyPair(2048);
+
+        Cipher legacyCipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+        legacyCipher.init(Cipher.ENCRYPT_MODE, keyPair.getPublic());
+        byte[] legacyEncrypted = legacyCipher.doFinal(Base64.getDecoder().decode(sourceEntropy));
+
+        CommandResult resultOld = cipherCommand.run(
+                "decrypt_old",
+                SimpleRSA.keyToBytes(keyPair.getPrivate()),
+                legacyEncrypted
+        );
+
+        assertFalse(resultOld.error());
+        assertEquals(decryptedSeedResult, resultOld.message());
+
+        CommandResult resultNew = cipherCommand.run(
+                "decrypt",
+                SimpleRSA.keyToBytes(keyPair.getPrivate()),
+                legacyEncrypted
+        );
+
+        assertTrue(resultNew.error());
     }
 
     @AfterAll

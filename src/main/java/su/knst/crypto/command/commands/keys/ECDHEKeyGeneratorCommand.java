@@ -6,10 +6,10 @@ import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.SimpleECDHE;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.util.Optional;
@@ -30,8 +30,8 @@ public class ECDHEKeyGeneratorCommand extends Command {
         try {
             KeyPair keyPair = SimpleECDHE.generateECKeys();
 
-            Files.write(publicPath, SimpleECDHE.keyToBytes(keyPair.getPublic()));
-            Files.write(privatePath, SimpleECDHE.keyToBytes(keyPair.getPrivate()));
+            FileUtils.writeOwnerOnly(publicPath, SimpleECDHE.keyToBytes(keyPair.getPublic()));
+            FileUtils.writeOwnerOnly(privatePath, SimpleECDHE.keyToBytes(keyPair.getPrivate()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

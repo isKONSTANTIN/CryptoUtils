@@ -7,12 +7,17 @@ import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.keys.ECDHEKeyGeneratorCommand;
 import su.knst.crypto.command.commands.seed.SeedECDHECipherCommand;
 import su.knst.crypto.command.commands.seed.SeedGeneratorCommand;
+import su.knst.crypto.utils.SimpleECDHE;
 
+import javax.crypto.KeyAgreement;
+import javax.crypto.SecretKey;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Objects;
 
@@ -44,7 +49,7 @@ class ECDHETest {
 
     @Test
     @Order(1)
-    void genKeys() {
+    void genKeys() throws IOException {
         ECDHEKeyGeneratorCommand keyGeneratorCommand = main.getHandler().getCommand(ECDHEKeyGeneratorCommand.class).orElseThrow();
 
         CommandResult aliceResult = keyGeneratorCommand.run(
@@ -62,6 +67,11 @@ class ECDHETest {
                 )
         );
         assertFalse(bobResult.error());
+
+        if (ALICE_SEC_KEY_FILE_PATH.getFileSystem().supportedFileAttributeViews().contains("posix")) {
+            assertEquals("rw-------", java.nio.file.attribute.PosixFilePermissions.toString(Files.getPosixFilePermissions(ALICE_SEC_KEY_FILE_PATH)));
+            assertEquals("rw-------", java.nio.file.attribute.PosixFilePermissions.toString(Files.getPosixFilePermissions(BOB_SEC_KEY_FILE_PATH)));
+        }
     }
 
     @Test
@@ -112,6 +122,29 @@ class ECDHETest {
         assertFalse(aliceView.error());
 
         assertEquals(decryptedSeedResult, aliceView.message());
+    }
+
+    @Test
+    @Order(5)
+    void ivIsNotReusedBetweenCalls() throws Exception {
+        KeyPair alice = SimpleECDHE.generateECKeys();
+        KeyPair bob = SimpleECDHE.generateECKeys();
+
+        SecretKey sharedSecret = SimpleECDHE.generateSharedSecret(alice.getPrivate(), bob.getPublic());
+
+        byte[] plaintext = "same plaintext encrypted twice".getBytes();
+
+        byte[] firstCipherText = SimpleECDHE.encrypt(sharedSecret, plaintext);
+        byte[] secondCipherText = SimpleECDHE.encrypt(sharedSecret, plaintext);
+
+        int ivLength = firstCipherText[0];
+        byte[] firstIv = Arrays.copyOfRange(firstCipherText, 1, 1 + ivLength);
+        byte[] secondIv = Arrays.copyOfRange(secondCipherText, 1, 1 + ivLength);
+
+        assertFalse(Arrays.equals(firstIv, secondIv), "IV must not be reused between encrypt() calls");
+
+        assertArrayEquals(plaintext, SimpleECDHE.decrypt(sharedSecret, firstCipherText));
+        assertArrayEquals(plaintext, SimpleECDHE.decrypt(sharedSecret, secondCipherText));
     }
 
     @AfterAll

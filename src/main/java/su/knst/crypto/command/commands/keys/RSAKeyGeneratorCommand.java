@@ -6,10 +6,10 @@ import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.SimpleRSA;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.KeyPair;
 import java.util.Optional;
@@ -31,8 +31,8 @@ public class RSAKeyGeneratorCommand extends Command {
         try {
             KeyPair keyPair = SimpleRSA.generateKeyPair(size);
 
-            Files.write(publicPath, SimpleRSA.keyToBytes(keyPair.getPublic()));
-            Files.write(privatePath, SimpleRSA.keyToBytes(keyPair.getPrivate()));
+            FileUtils.writeOwnerOnly(publicPath, SimpleRSA.keyToBytes(keyPair.getPublic()));
+            FileUtils.writeOwnerOnly(privatePath, SimpleRSA.keyToBytes(keyPair.getPrivate()));
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

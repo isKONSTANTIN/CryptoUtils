@@ -13,7 +13,6 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 
 public class SimpleECDHE {
-    static final byte[] iv = new SecureRandom().generateSeed(16);
     static {
         Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
     }
@@ -53,6 +52,7 @@ public class SimpleECDHE {
     }
 
     public static byte[] encrypt(SecretKey key, byte[] data) throws GeneralSecurityException {
+        byte[] iv = new SecureRandom().generateSeed(16);
         IvParameterSpec ivSpec = new IvParameterSpec(iv);
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding", "BC");
         cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec);
