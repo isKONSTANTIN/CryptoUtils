@@ -78,6 +78,9 @@ public final class ShareCardImage {
     private static final int HEX_BLOCK_PADDING_V = 10;
     private static final int HEX_BLOCK_PADDING_H = 12;
 
+    private static final int CHECKSUM_BARCODE_WIDTH = 220;
+    private static final int CHECKSUM_BARCODE_HEIGHT = 36;
+
     private static final BasicStroke DASHED_STROKE =
             new BasicStroke(1f, BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, 10f, new float[]{4f, 3f}, 0f);
 
@@ -111,12 +114,13 @@ public final class ShareCardImage {
 
     public static BufferedImage build(ShareCardData data) throws WriterException {
         BufferedImage qrImage = data.showQr() ? buildQrImage(data.hexPayload(), data.errorCorrectionLevel()) : null;
+        BufferedImage checksumBarcodeImage = buildChecksumBarcodeImage(data.checksumHex());
 
         int contentWidth = CARD_WIDTH - 2 * PADDING_SIDE;
         int hexMaxWidth = contentWidth - 2 * HEX_BLOCK_PADDING_H;
         HexLayout hexLayout = layoutHex(data.hexPayload(), hexMaxWidth);
 
-        int canvasHeight = computeCanvasHeight(hexLayout, qrImage);
+        int canvasHeight = computeCanvasHeight(hexLayout, qrImage, checksumBarcodeImage);
 
         BufferedImage canvas = new BufferedImage(
                 CARD_WIDTH * RENDER_SCALE, canvasHeight * RENDER_SCALE, BufferedImage.TYPE_INT_RGB);
@@ -147,6 +151,9 @@ public final class ShareCardImage {
         y += 12;
 
         y = drawChecksumRow(g, data, y, contentWidth);
+        y += 12;
+
+        y = drawChecksumBarcode(g, checksumBarcodeImage, y);
         y += 12;
 
         y = drawNotesBlock(g, y, contentWidth);
@@ -222,6 +229,37 @@ public final class ShareCardImage {
         g.drawRect(qrX, Math.round(y), qrLogicalWidth - 1, qrLogicalHeight - 1);
 
         return y + qrLogicalHeight;
+    }
+
+    // ---- Checksum barcode ----------------------------------------------------------------------
+
+    private static BufferedImage buildChecksumBarcodeImage(String checksumHex) throws WriterException {
+        BitMatrix matrix = new MultiFormatWriter().encode(
+                checksumHex,
+                BarcodeFormat.CODE_128,
+                CHECKSUM_BARCODE_WIDTH * RENDER_SCALE,
+                CHECKSUM_BARCODE_HEIGHT * RENDER_SCALE,
+                Map.of(EncodeHintType.MARGIN, 4)
+        );
+
+        return MatrixToImageWriter.toBufferedImage(matrix);
+    }
+
+    private static float drawChecksumBarcode(Graphics2D g, BufferedImage barcodeImage, float y) {
+        int barcodeLogicalWidth = barcodeImage.getWidth() / RENDER_SCALE;
+        int barcodeLogicalHeight = barcodeImage.getHeight() / RENDER_SCALE + 1;
+        int barcodeX = centeredX(barcodeLogicalWidth, CARD_WIDTH);
+
+        AffineTransform scaledTransform = g.getTransform();
+        g.setTransform(new AffineTransform());
+        g.drawImage(barcodeImage, barcodeX * RENDER_SCALE, Math.round(y * RENDER_SCALE), null);
+        g.setTransform(scaledTransform);
+
+        g.setColor(LINE_SOLID);
+        g.setStroke(new BasicStroke(1f));
+        g.drawRect(barcodeX, Math.round(y), barcodeLogicalWidth - 1, barcodeLogicalHeight - 1);
+
+        return y + barcodeLogicalHeight;
     }
 
     // ---- Header --------------------------------------------------------------------------------
@@ -432,13 +470,14 @@ public final class ShareCardImage {
 
     // ---- Canvas sizing --------------------------------------------------------------------------
 
-    private static int computeCanvasHeight(HexLayout hexLayout, BufferedImage qr) {
+    private static int computeCanvasHeight(HexLayout hexLayout, BufferedImage qr, BufferedImage checksumBarcode) {
         float height = PADDING_TOP
                 + headerBlockHeight() + 12
                 + metaBlockHeight() + 12
                 + (qr != null ? qr.getHeight() / RENDER_SCALE + 12 : 0)
                 + hexBlockHeight(hexLayout) + 12
                 + checksumRowHeight() + 12
+                + checksumBarcode.getHeight() / RENDER_SCALE + 12
                 + notesBlockHeight() + 10
                 + footerRowHeight()
                 + PADDING_BOTTOM;

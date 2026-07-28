@@ -298,9 +298,6 @@ public class BackupCreateCommand extends Command {
             appliedLevel = fittingLevel;
         }
 
-        if (images == null)
-            return CommandResult.error("Failed to produce images for this backup, please try again");
-
         List<Path> written = new ArrayList<>();
 
         try {
