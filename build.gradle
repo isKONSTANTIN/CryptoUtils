@@ -63,7 +63,6 @@ def graalvmLauncher = javaToolchains.launcherFor {
 // build`/`test` never needs GraalVM or bloats the jar), and extracted to a temp dir at
 // startup by su.knst.crypto.utils.NativeAwtLibraries, keeping the distributed native
 // binary a single file with no external libraries alongside it.
-def windows = org.gradle.internal.os.OperatingSystem.current().isWindows()
 def awtBootstrapDir = layout.buildDirectory.dir('native-awt-bootstrap')
 def generatedNativeLibsDir = layout.buildDirectory.dir('generated/resources/native-libs')
 
@@ -111,7 +110,7 @@ tasks.register('compileAwtBootstrap', Exec) {
     inputs.file(awtBootstrapDir.map { it.file('AwtBootstrap.java') })
     outputs.file(awtBootstrapDir.map { it.file('AwtBootstrap.class') })
     workingDir awtBootstrapDir
-    executable graalvmLauncher.map { it.metadata.installationPath.file(windows ? 'bin/javac.exe' : 'bin/javac').asFile.absolutePath }.get()
+    executable graalvmLauncher.map { it.metadata.installationPath.file('bin/javac').asFile.absolutePath }.get()
     args 'AwtBootstrap.java'
 }
 
@@ -121,21 +120,16 @@ tasks.register('buildAwtBootstrapImage', Exec) {
     outputs.dir(awtBootstrapDir)
     workingDir awtBootstrapDir
 
-    def nativeImagePath = graalvmLauncher.map { it.metadata.installationPath.file(windows ? 'bin/native-image.cmd' : 'bin/native-image').asFile.absolutePath }.get()
+    def nativeImagePath = graalvmLauncher.map { it.metadata.installationPath.file('bin/native-image').asFile.absolutePath }.get()
 
-    if (windows) {
-        executable 'cmd'
-        args '/c', nativeImagePath, '--enable-all-security-services', '--no-fallback', 'AwtBootstrap'
-    } else {
-        executable nativeImagePath
-        args '--enable-all-security-services', '--no-fallback', 'AwtBootstrap'
-    }
+    executable nativeImagePath
+    args '--enable-all-security-services', '--no-fallback', 'AwtBootstrap'
 }
 
 tasks.register('copyNativeAwtLibs', Copy) {
     dependsOn 'buildAwtBootstrapImage'
     from(awtBootstrapDir) {
-        include '*.so', '*.dll', '*.dylib'
+        include '*.so', '*.dylib'
     }
     into generatedNativeLibsDir.map { it.dir('su/knst/crypto/native-libs') }
 
@@ -143,7 +137,7 @@ tasks.register('copyNativeAwtLibs', Copy) {
     // since exactly which libraries get produced can vary by platform/JDK version.
     doLast {
         def libFiles = fileTree(awtBootstrapDir) {
-            include '*.so', '*.dll', '*.dylib'
+            include '*.so', '*.dylib'
         }.files.collect { it.name }.sort()
 
         new File(destinationDir, 'manifest.txt').text = libFiles.join('\n')

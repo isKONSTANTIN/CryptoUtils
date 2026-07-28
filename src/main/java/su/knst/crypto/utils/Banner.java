@@ -21,7 +21,7 @@ public class Banner {
     public static String render(Terminal terminal) {
         AttributedStringBuilder builder = new AttributedStringBuilder();
 
-        String version = "v" + Main.getVersion();
+        String version = "v." + Main.getVersion();
         String lastLogoLine = LOGO[LOGO.length - 1] + " " + version;
 
         int contentWidth = 0;

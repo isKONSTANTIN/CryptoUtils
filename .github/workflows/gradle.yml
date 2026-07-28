@@ -54,33 +54,23 @@ jobs:
             artifact-suffix: linux-x86_64
           - os: ubuntu-24.04-arm
             artifact-suffix: linux-arm64
-          - os: windows-latest
-            artifact-suffix: windows-x86_64
-          - os: windows-11-arm
-            artifact-suffix: windows-arm64
 
     runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v4
-      - name: Set up GraalVM
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '25'
-          distribution: 'graalvm-community'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Install zlib (static)
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y zlib1g-dev
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
       - name: Build native image
-        run: ./gradlew nativeCompile
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/native-build.Dockerfile
+          target: export
+          outputs: type=local,dest=out
 
       - name: Upload native binary
         uses: actions/upload-artifact@v4
         with:
           name: CryptoUtils-native-${{ matrix.artifact-suffix }}
-          path: |
-            build/native/nativeCompile/cryptoutils
-            build/native/nativeCompile/cryptoutils.exe
+          path: out/cryptoutils
