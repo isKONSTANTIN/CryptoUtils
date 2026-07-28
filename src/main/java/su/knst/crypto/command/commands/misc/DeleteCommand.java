@@ -24,12 +24,12 @@ public class DeleteCommand extends Command {
         Optional<Path> oFile = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (oFile.isEmpty())
-            return CommandResult.error("File argument not set");
+            return CommandResult.plainError("File argument not set");
 
         Path target = oFile.get();
 
         if (!target.toFile().exists() || !target.toFile().isFile())
-            return CommandResult.of("File not exists");
+            return CommandResult.plain("File not exists");
 
         Optional<Boolean> answer = Main.getTerminalWorker()
                 .ask(new TerminalQuestion(
@@ -38,7 +38,7 @@ public class DeleteCommand extends Command {
                 .map((s) -> s.equals("Y"));
 
         if (answer.isEmpty() || !answer.get())
-            return CommandResult.of("File was NOT deleted");
+            return CommandResult.plain("File was NOT deleted");
 
         // Thanks to @makkarpov for secure file delete
         try (SeekableByteChannel channel = Files.newByteChannel(target, StandardOpenOption.WRITE, StandardOpenOption.SYNC)) {
@@ -59,10 +59,10 @@ public class DeleteCommand extends Command {
         } catch (Exception e) {
             e.printStackTrace();
 
-            return CommandResult.error("File was NOT deleted");
+            return CommandResult.plainError("File was NOT deleted");
         }
 
-        return CommandResult.of("File was deleted");
+        return CommandResult.plain("File was deleted");
     }
 
     @Override

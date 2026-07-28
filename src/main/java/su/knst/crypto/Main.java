@@ -18,6 +18,7 @@ import su.knst.crypto.command.commands.seed.*;
 import su.knst.crypto.command.commands.shamir.ShamirCommand;
 import su.knst.crypto.utils.codes.SimplePDF417Worker;
 import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
+import su.knst.crypto.utils.NativeAwtLibraries;
 import su.knst.crypto.utils.worldlists.WordLists;
 
 import java.io.IOException;
@@ -107,6 +108,8 @@ public class Main {
     }
 
     public static void main(String[] args) {
+        NativeAwtLibraries.extractAndRegister();
+
         Main main = new Main();
 
         if (args.length == 0) {

@@ -187,6 +187,13 @@ public class BackupRestoreCommand extends Command {
                 try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(secret))) {
                     text = new String(gzip.readAllBytes(), StandardCharsets.UTF_8);
                 } catch (IOException e) {
+                    if (!isBinary(secret)) {
+                        return CommandResultBuilder.builder()
+                                .line("Warning: recovered data is not gzip-compressed, showing raw text instead")
+                                .line(new String(secret, StandardCharsets.UTF_8))
+                                .build();
+                    }
+
                     return CommandResult.error("Failed to decompress recovered text: " + e.getMessage());
                 }
 
@@ -210,6 +217,30 @@ public class BackupRestoreCommand extends Command {
                 return CommandResult.error("Unknown type");
             }
         }
+    }
+
+    // heuristic: valid, strict UTF-8 with no control characters other than common whitespace
+    private static boolean isBinary(byte[] data) {
+        String decoded;
+
+        try {
+            decoded = StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
+                    .decode(java.nio.ByteBuffer.wrap(data))
+                    .toString();
+        } catch (java.nio.charset.CharacterCodingException e) {
+            return true;
+        }
+
+        for (int i = 0; i < decoded.length(); i++) {
+            char c = decoded.charAt(i);
+
+            if (Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t')
+                return true;
+        }
+
+        return false;
     }
 
     private static Optional<Integer> askInt(TerminalWorker tw, String question) {

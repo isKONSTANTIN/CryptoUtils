@@ -51,19 +51,19 @@ public class TerminalWorker {
                 .terminal(terminal);
 
         LineReader reader = readerBuilder.build();
-        writer.println(question.text());
-        writer.println();
 
-        StringBuilder prompt = new StringBuilder();
+        StringBuilder prompt = new StringBuilder(question.text()).append(" ");
 
         if (answers != null) {
+            prompt.append("[");
             for (String s : answers)
                 prompt.append(s).append("/");
 
             prompt.deleteCharAt(prompt.length() - 1);
+            prompt.append("]");
         }
 
-        prompt.append("? ");
+        prompt.append(" ");
 
         String answer = null;
         while (true) {
@@ -93,7 +93,7 @@ public class TerminalWorker {
         writer = terminal.writer();
 
         writer.println(Banner.render(terminal));
-        writer.println(handler.run("help").message());
+        printResult(handler.run("help"));
 
         terminal.handle(Terminal.Signal.WINCH, signal -> {
             writer.println(Banner.render(terminal));
@@ -117,9 +117,16 @@ public class TerminalWorker {
 
             CommandResult result = handler.run(line);
 
-            writer.println(result.message());
+            printResult(result);
         }
 
+    }
+
+    private void printResult(CommandResult result) {
+        String rendered = result.render(false);
+
+        if (!rendered.isBlank())
+            writer.println(rendered);
     }
 
     public void stop() {

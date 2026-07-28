@@ -42,6 +42,16 @@ Done
 cu&gt; seed_to_base satoshi like gold
 <span style="color:#06989A">go</span>at      <span style="color:#06989A">go</span>ddess   <span style="background-color:#FFFFFF"><span style="color:#1C1C1C">gold   </span></span>   <span style="color:#06989A">go</span>od      <span style="color:#06989A">go</span>ose     <span style="color:#06989A">go</span>rilla   <span style="color:#06989A">go</span>spel    <span style="color:#06989A">go</span>ssip    <span style="color:#06989A">go</span>vern    <span style="color:#06989A">go</span>wn</pre>
 
+## Native Binary
+
+CI builds a native executable (via [GraalVM native-image](https://www.graalvm.org/latest/reference-manual/native-image/)) for Linux and Windows, x86_64 and arm64 — no JVM installation required to run it. Download it from the "CryptoUtils-native-\*" artifacts on the [latest GitHub Actions run](https://github.com/isKONSTANTIN/CryptoUtils/actions/workflows/gradle.yml).
+
+To build it yourself, install a [GraalVM](https://www.graalvm.org/downloads/) JDK (25 or newer) and run:
+
+<pre>./gradlew nativeCompile</pre>
+
+The binary is written to `build/native/nativeCompile/`.
+
 ## Wiki
 
 Instructions for building, a list of all commands and the use of some can be found in the [Wiki](https://github.com/isKONSTANTIN/CryptoUtils/wiki/Using)

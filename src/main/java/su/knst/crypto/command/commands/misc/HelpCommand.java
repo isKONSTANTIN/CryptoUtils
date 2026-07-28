@@ -1,11 +1,12 @@
 package su.knst.crypto.command.commands.misc;
 
-import org.jline.utils.AttributedStringBuilder;
 import org.jline.utils.AttributedStyle;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.Panel;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.ConsoleBox;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -27,7 +28,7 @@ public class HelpCommand extends Command {
     }
 
     private CommandResult runList() {
-        StringBuilder builder = new StringBuilder();
+        List<Panel> panels = new ArrayList<>();
 
         Map<String, Command> commands = handler.getCommands();
         Map<CommandTag, List<String>> commandsNamesByTag = handler.getCommandsNamesByTag();
@@ -44,15 +45,15 @@ public class HelpCommand extends Command {
             for (Map.Entry<String, List<String>> group : grouped) {
                 Command command = commands.get(group.getValue().get(0));
 
-                lines.add(padRight(group.getKey(), nameWidth) + "  " + command.description());
+                lines.add(ConsoleBox.padRight(group.getKey(), nameWidth) + "  " + command.description());
             }
 
-            builder.append("\n").append(box(entry.getKey().title, lines, colorFor(entry.getKey()))).append("\n");
+            panels.add(Panel.framed(entry.getKey().title, String.join("\n", lines), colorFor(entry.getKey())));
         }
 
-        builder.append("\nType 'help <command>' for detailed usage.\n");
+        panels.add(Panel.plain("Type 'help <command>' for detailed usage."));
 
-        return CommandResult.of(builder.toString());
+        return CommandResult.panels(panels);
     }
 
     private CommandResult runDetailed(String alias) {
@@ -74,10 +75,10 @@ public class HelpCommand extends Command {
             usage += " " + args;
 
         StringBuilder builder = new StringBuilder();
-        builder.append("\n").append(wrap(usage, WRAP_WIDTH, "")).append("\n\n");
-        builder.append(wrap(command.description(), WRAP_WIDTH, "  ")).append("\n");
+        builder.append(ConsoleBox.wrap(usage, WRAP_WIDTH, "")).append("\n\n");
+        builder.append(ConsoleBox.wrap(command.description(), WRAP_WIDTH, "  "));
 
-        return CommandResult.of(builder.toString());
+        return CommandResult.plain(builder.toString());
     }
 
     // Groups aliases that resolve to the very same Command instance, preserving registration order.
@@ -112,62 +113,6 @@ public class HelpCommand extends Command {
             case CRYPTOGRAPHY -> AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN).bold();
             case CRYPTOCURRENCIES -> AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN).bold();
         };
-    }
-
-    private static String box(String title, List<String> lines, AttributedStyle frameStyle) {
-        int width = title.length();
-        for (String line : lines)
-            width = Math.max(width, line.length());
-
-        String horizontal = "─".repeat(width + 2);
-
-        AttributedStringBuilder result = new AttributedStringBuilder();
-
-        result.style(frameStyle);
-        result.append("┌").append(horizontal).append("┐\n");
-        result.append("│ ").append(padRight(title, width)).append(" │\n");
-        result.append("├").append(horizontal).append("┤\n");
-
-        for (String line : lines) {
-            result.style(frameStyle);
-            result.append("│ ");
-            result.style(AttributedStyle.DEFAULT);
-            result.append(padRight(line, width));
-            result.style(frameStyle);
-            result.append(" │\n");
-        }
-
-        result.style(frameStyle);
-        result.append("└").append(horizontal).append("┘");
-        result.style(AttributedStyle.DEFAULT);
-
-        return result.toAnsi();
-    }
-
-    private static String padRight(String text, int width) {
-        return text + " ".repeat(Math.max(0, width - text.length()));
-    }
-
-    private static String wrap(String text, int width, String indent) {
-        String[] words = text.split(" ");
-        StringBuilder result = new StringBuilder();
-        StringBuilder line = new StringBuilder(indent);
-
-        for (String word : words) {
-            if (line.length() > indent.length() && line.length() + 1 + word.length() > width) {
-                result.append(line).append("\n");
-                line = new StringBuilder(indent);
-            }
-
-            if (line.length() > indent.length())
-                line.append(" ");
-
-            line.append(word);
-        }
-
-        result.append(line);
-
-        return result.toString();
     }
 
     @Override

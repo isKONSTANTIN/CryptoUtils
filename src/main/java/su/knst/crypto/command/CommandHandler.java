@@ -29,7 +29,7 @@ public class CommandHandler {
             return CommandResult.of("");
         }
 
-        return command.run(new ParamsContainer(Arrays.copyOfRange(words, 1, words.length)));
+        return command.run(new ParamsContainer(Arrays.copyOfRange(words, 1, words.length))).withTitle(words[0]);
     }
 
     public <T extends Command> void registerCommand(String alias, T command) {

@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id "application"
+    id 'org.graalvm.buildtools.native' version '1.1.6'
 }
 
 group 'su.knrg.crypto'
@@ -27,7 +28,7 @@ dependencies {
     testImplementation(platform('org.junit:junit-bom:5.9.2'))
     testImplementation('org.junit.jupiter:junit-jupiter')
 
-    include group: 'org.bouncycastle', name: 'bcprov-jdk15on', version: '1.70'
+    include group: 'org.bouncycastle', name: 'bcprov-jdk18on', version: '1.80'
 
     include group: 'com.google.zxing', name: 'core', version: '3.3.0'
     include group: 'com.google.zxing', name: 'javase', version: '3.3.0'
@@ -46,6 +47,107 @@ java {
 
 test {
     useJUnitPlatform()
+}
+
+def graalvmLauncher = javaToolchains.launcherFor {
+    languageVersion.set(JavaLanguageVersion.of(25))
+    vendor.set(JvmVendorSpec.matching("GraalVM Community"))
+}
+
+// java.desktop's AWT classes (used for QR/PDF417 image output) load a few JDK-shipped
+// shared libraries via System.loadLibrary at first use. native-image can't statically
+// link them into the executable, and some of them (libjava/libjvm "shim" libraries)
+// only exist as a native-image build artifact, not as JDK files - they're generated
+// fresh by building a trivial AWT-touching class here. All of them are embedded as
+// resources on the native image's own classpath (not the jar's, so a plain `./gradlew
+// build`/`test` never needs GraalVM or bloats the jar), and extracted to a temp dir at
+// startup by su.knst.crypto.utils.NativeAwtLibraries, keeping the distributed native
+// binary a single file with no external libraries alongside it.
+def windows = org.gradle.internal.os.OperatingSystem.current().isWindows()
+def awtBootstrapDir = layout.buildDirectory.dir('native-awt-bootstrap')
+def generatedNativeLibsDir = layout.buildDirectory.dir('generated/resources/native-libs')
+
+graalvmNative {
+    binaries {
+        main {
+            mainClass.set(mainClassName)
+            imageName.set('cryptoutils')
+            buildArgs.add('--enable-all-security-services')
+            javaLauncher.set(graalvmLauncher)
+            classpath(files(generatedNativeLibsDir).builtBy('copyNativeAwtLibs'))
+        }
+    }
+    metadataRepository {
+        enabled = true
+    }
+}
+
+tasks.register('writeAwtBootstrapSource') {
+    def sourceFile = awtBootstrapDir.map { it.file('AwtBootstrap.java') }
+    outputs.file(sourceFile)
+    doLast {
+        def file = sourceFile.get().asFile
+        file.parentFile.mkdirs()
+        file.text = '''public class AwtBootstrap {
+    public static void main(String[] args) throws Exception {
+        java.awt.image.BufferedImage image = new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        java.awt.Graphics2D g = image.createGraphics();
+        g.fillRect(0, 0, 1, 1);
+        g.dispose();
+
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "png", out);
+        javax.imageio.ImageIO.write(image, "jpg", out);
+
+        System.out.println(out.size());
+    }
+}
+'''
+    }
+}
+
+tasks.register('compileAwtBootstrap', Exec) {
+    dependsOn 'writeAwtBootstrapSource'
+    inputs.file(awtBootstrapDir.map { it.file('AwtBootstrap.java') })
+    outputs.file(awtBootstrapDir.map { it.file('AwtBootstrap.class') })
+    workingDir awtBootstrapDir
+    executable graalvmLauncher.map { it.metadata.installationPath.file(windows ? 'bin/javac.exe' : 'bin/javac').asFile.absolutePath }.get()
+    args 'AwtBootstrap.java'
+}
+
+tasks.register('buildAwtBootstrapImage', Exec) {
+    dependsOn 'compileAwtBootstrap'
+    inputs.file(awtBootstrapDir.map { it.file('AwtBootstrap.class') })
+    outputs.dir(awtBootstrapDir)
+    workingDir awtBootstrapDir
+
+    def nativeImagePath = graalvmLauncher.map { it.metadata.installationPath.file(windows ? 'bin/native-image.cmd' : 'bin/native-image').asFile.absolutePath }.get()
+
+    if (windows) {
+        executable 'cmd'
+        args '/c', nativeImagePath, '--enable-all-security-services', '--no-fallback', 'AwtBootstrap'
+    } else {
+        executable nativeImagePath
+        args '--enable-all-security-services', '--no-fallback', 'AwtBootstrap'
+    }
+}
+
+tasks.register('copyNativeAwtLibs', Copy) {
+    dependsOn 'buildAwtBootstrapImage'
+    from(awtBootstrapDir) {
+        include '*.so', '*.dll', '*.dylib'
+    }
+    into generatedNativeLibsDir.map { it.dir('su/knst/crypto/native-libs') }
+
+    // NativeAwtLibraries reads this manifest at runtime instead of guessing filenames,
+    // since exactly which libraries get produced can vary by platform/JDK version.
+    doLast {
+        def libFiles = fileTree(awtBootstrapDir) {
+            include '*.so', '*.dll', '*.dylib'
+        }.files.collect { it.name }.sort()
+
+        new File(destinationDir, 'manifest.txt').text = libFiles.join('\n')
+    }
 }
 
 jar {

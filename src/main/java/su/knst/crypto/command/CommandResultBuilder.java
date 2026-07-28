@@ -42,6 +42,6 @@ public class CommandResultBuilder {
     }
 
     public CommandResult build() {
-        return new CommandResult(stringBuilder.toString(), error);
+        return CommandResult.of(stringBuilder.toString(), error);
     }
 }
