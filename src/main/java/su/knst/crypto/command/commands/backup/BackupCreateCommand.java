@@ -4,17 +4,18 @@ import com.codahale.shamir.Scheme;
 import com.google.zxing.WriterException;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
 import su.knst.crypto.utils.Prompts;
-import su.knst.crypto.utils.TerminalQuestion;
 import su.knst.crypto.utils.codes.ShareCardImage;
 import su.knst.crypto.utils.codes.SharePrintLayoutPlanner;
 import su.knst.crypto.utils.codes.SharePrintPageRenderer;
@@ -35,7 +36,11 @@ import java.util.*;
 import java.util.zip.GZIPOutputStream;
 
 public class BackupCreateCommand extends Command {
-    private static final List<String> TYPES = List.of("file", "text", "seed");
+    private static final List<Prompts.Choice> TYPE_CHOICES = List.of(
+            new Prompts.Choice("file", "File", "Read the secret from a file on disk"),
+            new Prompts.Choice("text", "Text", "Type the secret in directly"),
+            new Prompts.Choice("seed", "Seed", "Split a BIP-39 mnemonic phrase")
+    );
     // Tried in order, most error-correction first; if a share is too large to fit a QR code at
     // one level, we drop down a notch rather than giving up on the QR entirely.
     private static final ErrorCorrectionLevel[] ERROR_CORRECTION_LEVELS = {
@@ -46,106 +51,43 @@ public class BackupCreateCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        return runScripted(args);
+        return resolve(in);
     }
 
-    private CommandResult runScripted(ParamsContainer args) {
-        Optional<String> oType = args.stringV(0);
-
-        if (oType.isEmpty() || !TYPES.contains(oType.get()))
-            return CommandResult.error("Type must be 'file', 'text' or 'seed'");
-
-        String type = oType.get();
-
-        Optional<String> oName = args.stringV(1);
-
-        if (oName.isEmpty())
-            return CommandResult.error("Backup name not set");
-
-        Optional<Integer> oAllParts = args.intV(2);
-
-        if (oAllParts.isEmpty())
-            return CommandResult.error("All parts not set");
-
-        Optional<Integer> oForRecover = args.intV(3);
-
-        if (oForRecover.isEmpty())
-            return CommandResult.error("Parts for recover not set");
-
-        byte[] secret;
-
-        switch (type) {
-            case "file" -> {
-                Optional<String> oPath = args.stringV(4);
-
-                if (oPath.isEmpty())
-                    return CommandResult.error("Source path not set");
-
-                try {
-                    secret = Files.readAllBytes(Main.getCurrentPath().resolve(oPath.get()));
-                } catch (IOException e) {
-                    return CommandResult.error("Failed to read source file: " + e.getMessage());
-                }
-            }
-            case "text" -> {
-                if (args.size() <= 4)
-                    return CommandResult.error("Source text not set");
-
-                StringBuilder text = new StringBuilder();
-
-                for (int i = 4; i < args.size(); i++)
-                    text.append(i > 4 ? " " : "").append(args.stringV(i).orElseThrow());
-
-                secret = text.toString().getBytes(StandardCharsets.UTF_8);
-            }
-            case "seed" -> {
-                if (args.size() <= 4)
-                    return CommandResult.error("Seed words not set");
-
-                String[] words = new String[args.size() - 4];
-
-                for (int i = 0; i < words.length; i++)
-                    words[i] = args.stringV(i + 4).orElseThrow();
-
-                try {
-                    MnemonicUtils.checkMnemonic(words);
-                } catch (WrongMnemonicException | NoSuchAlgorithmException e) {
-                    return CommandResult.error("Failed to check mnemonic: " + e.getMessage());
-                }
-
-                secret = MnemonicUtils.entropyFromMnemonic(words);
-            }
-            default -> {
-                return CommandResult.error("Type must be 'file', 'text' or 'seed'");
-            }
-        }
-
-        return finish(type, oName.get(), oAllParts.get(), oForRecover.get(), secret);
-    }
-
-    private static final List<Prompts.Choice> TYPE_CHOICES = List.of(
-            new Prompts.Choice("file", "File", "Read the secret from a file on disk"),
-            new Prompts.Choice("text", "Text", "Type the secret in directly"),
-            new Prompts.Choice("seed", "Seed", "Split a BIP-39 mnemonic phrase")
-    );
-
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<String> oType = Prompts.askChoice(tw, "Backup source type?", TYPE_CHOICES);
+    // Argument order (type, name, all_parts, for_recover, source...) matches args() and is relied
+    // on by scripted callers, so it's kept identical for the interactive prompt sequence too.
+    private CommandResult resolve(ArgSource in) {
+        Optional<String> oType = in.choice("Backup source type?", TYPE_CHOICES);
 
         if (oType.isEmpty())
             return CommandResult.error("No input");
 
         String type = oType.get();
+
+        Optional<String> oName = in.string("Name for these backup copies?");
+
+        if (oName.isEmpty())
+            return CommandResult.error("No input");
+
+        Optional<Integer> oAllParts = in.integer("Total number of parts (N)?");
+
+        if (oAllParts.isEmpty())
+            return CommandResult.error("No input");
+
+        Optional<Integer> oForRecover = in.integer("Parts required to recover (K)?");
+
+        if (oForRecover.isEmpty())
+            return CommandResult.error("No input");
+
         byte[] secret;
 
         switch (type) {
             case "file" -> {
-                Optional<Path> oPath = Prompts.askExistingFilePath(tw, "Path to file?");
+                Optional<Path> oPath = in.existingFilePath("Path to file?");
 
                 if (oPath.isEmpty())
                     return CommandResult.error("No input");
@@ -157,15 +99,15 @@ public class BackupCreateCommand extends Command {
                 }
             }
             case "text" -> {
-                Optional<String> oText = tw.ask(new TerminalQuestion("Enter text to backup:", null));
+                Optional<String> oText = in.restOfLine("Enter text to backup:");
 
-                if (oText.isEmpty() || oText.get().isEmpty())
+                if (oText.isEmpty())
                     return CommandResult.error("No input");
 
                 secret = oText.get().getBytes(StandardCharsets.UTF_8);
             }
             case "seed" -> {
-                Optional<String[]> oWords = Prompts.askWords(tw, "Enter seed words separated by spaces:");
+                Optional<String[]> oWords = in.words("Enter seed words separated by spaces:");
 
                 if (oWords.isEmpty())
                     return CommandResult.error("No input");
@@ -185,22 +127,7 @@ public class BackupCreateCommand extends Command {
             }
         }
 
-        Optional<String> oName = tw.ask(new TerminalQuestion("Name for these backup copies?", null));
-
-        if (oName.isEmpty() || oName.get().isBlank())
-            return CommandResult.error("No input");
-
-        Optional<Integer> oAllParts = Prompts.askInt(tw, "Total number of parts (N)?");
-
-        if (oAllParts.isEmpty())
-            return CommandResult.error("No input");
-
-        Optional<Integer> oForRecover = Prompts.askInt(tw, "Parts required to recover (K)?");
-
-        if (oForRecover.isEmpty())
-            return CommandResult.error("No input");
-
-        return finish(type, oName.get().trim(), oAllParts.get(), oForRecover.get(), secret);
+        return finish(type, oName.get(), oAllParts.get(), oForRecover.get(), secret);
     }
 
     private CommandResult finish(String type, String name, int allParts, int forRecover, byte[] secret) {

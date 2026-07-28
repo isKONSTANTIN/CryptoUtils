@@ -3,21 +3,21 @@ package su.knst.crypto.command.commands.qr;
 import com.google.zxing.WriterException;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.Prompts;
-import su.knst.crypto.utils.TerminalQuestion;
 import su.knst.crypto.utils.codes.AbstractCodeWorker;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -58,150 +58,94 @@ public class CodeCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        return runScripted(args);
+        return resolve(in);
     }
 
-    private CommandResult runScripted(ParamsContainer args) {
-        Optional<String> oMode = args.stringV(0);
-
-        if (oMode.isEmpty())
-            return CommandResult.error("Mode not set");
-
-        if (!(oMode.get().equals("scan") || oMode.get().equals("generate")))
-            return CommandResult.error("Mode must be 'scan' or 'generate'");
-
-        boolean mode = oMode.map((s) -> s.equals("scan")).get();
-
-        if (mode) {
-            Optional<String> oQRCodePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p).toString());
-
-            if (oQRCodePath.isEmpty())
-                return CommandResult.error("QR code path not set");
-
-            Optional<Path> oResultPath = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
-
-            return scan(oQRCodePath.get(), oResultPath.orElse(null));
-        }else {
-            int argIndex = 1;
-
-            Optional<String> oQRCodePath = args.stringV(argIndex++).map((p) -> Main.getCurrentPath().resolve(p).toString());
-
-            if (oQRCodePath.isEmpty())
-                return CommandResult.error("QR code path not set");
-
-            Optional<Integer> oPixels = args.intV(argIndex++);
-
-            if (oPixels.isEmpty())
-                return CommandResult.error("Pixels width not set");
-
-            Optional<String> oData = args.stringV(argIndex++);
-
-            if (oData.isEmpty())
-                return CommandResult.error("Text or path not set");
-
-            String startData = oData.get();
-
-            Optional<ErrorCorrectionLevel> level = Arrays.stream(ErrorCorrectionLevel.values())
-                    .filter((f) -> f.name().equals(startData.toUpperCase()))
-                    .findFirst();
-
-            if (level.isPresent()) {
-                oData = args.stringV(argIndex++);
-
-                if (oData.isEmpty())
-                    return CommandResult.error("Text or path not set");
-            }
-
-            StringBuilder data = new StringBuilder(oData.get());
-
-            try {
-                if (data.toString().startsWith("f:")){
-                    String path = Main.getCurrentPath().resolve(data.substring(2)).toString();
-
-                    generateFromFile(oQRCodePath.get(), path, oPixels.get(), level.orElse(ErrorCorrectionLevel.L));
-                }else {
-                    for (int i = argIndex; i < args.size(); i++)
-                        data.append(" ").append(args.stringV(i).orElseThrow());
-
-                    generate(oQRCodePath.get(), data.toString(), oPixels.get(), level.orElse(ErrorCorrectionLevel.L));
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-
-                return CommandResult.error("Failed");
-            }
-        }
-
-        return CommandResult.of("Done");
-    }
-
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<String> oMode = Prompts.askChoice(tw, "Scan an existing code, or generate a new one?", MODE_CHOICES);
+    private CommandResult resolve(ArgSource in) {
+        Optional<String> oMode = in.choice("Scan an existing code, or generate a new one?", MODE_CHOICES);
 
         if (oMode.isEmpty())
             return CommandResult.error("No input");
 
         if (oMode.get().equals("scan")) {
-            Optional<Path> oImagePath = Prompts.askExistingFilePath(tw, "Path to the code image?");
+            Optional<Path> oImagePath = in.existingFilePath("Path to the code image?");
 
             if (oImagePath.isEmpty())
                 return CommandResult.error("No input");
 
-            Optional<Path> oResultPath = Prompts.askNewFilePath(tw, "Save decoded content to file? (empty to print it instead)");
+            Optional<Path> oResultPath = in.newFilePath("Save decoded content to file? (empty to print it instead)");
 
             return scan(oImagePath.get().toString(), oResultPath.orElse(null));
-        } else {
-            Optional<Path> oResultPath = Prompts.askNewFilePath(tw, "Result image path?");
+        }
 
-            if (oResultPath.isEmpty())
-                return CommandResult.error("No input");
+        Optional<Path> oResultPath = in.newFilePath("Result image path?");
 
-            Optional<Integer> oPixels = Prompts.askInt(tw, "Image width/height in pixels?");
+        if (oResultPath.isEmpty())
+            return CommandResult.error("No input");
 
-            if (oPixels.isEmpty())
-                return CommandResult.error("No input");
+        Optional<Integer> oPixels = in.integer("Image width/height in pixels?");
 
-            Optional<String> oLevel = Prompts.askChoice(tw, "Error correction level?", errorCorrectionChoices());
+        if (oPixels.isEmpty())
+            return CommandResult.error("No input");
 
-            if (oLevel.isEmpty())
-                return CommandResult.error("No input");
+        // scripted mode may omit the level token entirely, defaulting to the lowest one
+        Optional<String> oLevel = in.choiceOr("Error correction level?", errorCorrectionChoices(), "l");
 
-            ErrorCorrectionLevel level = ErrorCorrectionLevel.valueOf(oLevel.get().toUpperCase());
+        if (oLevel.isEmpty())
+            return CommandResult.error("No input");
 
-            Optional<String> oSource = Prompts.askChoice(tw, "Encode text typed in directly, or the content of a file?", SOURCE_CHOICES);
+        ErrorCorrectionLevel level = ErrorCorrectionLevel.valueOf(oLevel.get().toUpperCase());
 
-            if (oSource.isEmpty())
-                return CommandResult.error("No input");
+        try {
+            if (in.interactive()) {
+                Optional<String> oSource = in.choice("Encode text typed in directly, or the content of a file?", SOURCE_CHOICES);
 
-            try {
+                if (oSource.isEmpty())
+                    return CommandResult.error("No input");
+
                 if (oSource.get().equals("file")) {
-                    Optional<Path> oSourcePath = Prompts.askExistingFilePath(tw, "Path to file to encode?");
+                    Optional<Path> oSourcePath = in.existingFilePath("Path to file to encode?");
 
                     if (oSourcePath.isEmpty())
                         return CommandResult.error("No input");
 
                     generateFromFile(oResultPath.get().toString(), oSourcePath.get().toString(), oPixels.get(), level);
                 } else {
-                    Optional<String> oText = tw.ask(new TerminalQuestion("Text to encode?", null));
+                    Optional<String> oText = in.string("Text to encode?");
 
-                    if (oText.isEmpty() || oText.get().isEmpty())
+                    if (oText.isEmpty())
                         return CommandResult.error("No input");
 
                     generate(oResultPath.get().toString(), oText.get(), oPixels.get(), level);
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
+            } else {
+                // "f:path" encodes a file's content, anything else is encoded as literal text
+                Optional<String> oData = in.restOfLine("Text to encode, or f:path to encode a file's content?");
 
-                return CommandResult.error("Failed");
+                if (oData.isEmpty())
+                    return CommandResult.error("No input");
+
+                String data = oData.get();
+
+                if (data.startsWith("f:")) {
+                    String path = Main.getCurrentPath().resolve(data.substring(2)).toString();
+
+                    generateFromFile(oResultPath.get().toString(), path, oPixels.get(), level);
+                } else {
+                    generate(oResultPath.get().toString(), data, oPixels.get(), level);
+                }
             }
+        } catch (Exception e) {
+            e.printStackTrace();
 
-            return CommandResult.of("Done");
+            return CommandResult.error("Failed");
         }
+
+        return CommandResult.of("Done");
     }
 
     private static List<Prompts.Choice> errorCorrectionChoices() {

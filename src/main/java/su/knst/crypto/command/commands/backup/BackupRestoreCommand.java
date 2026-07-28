@@ -1,21 +1,20 @@
 package su.knst.crypto.command.commands.backup;
 
 import com.codahale.shamir.Scheme;
-import org.jline.builtins.Completers;
-import org.jline.reader.Completer;
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.command.commands.seed.SeedGeneratorCommand;
 import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
 import su.knst.crypto.utils.Prompts;
-import su.knst.crypto.utils.TerminalQuestion;
 import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
 
 import java.io.ByteArrayInputStream;
@@ -31,70 +30,23 @@ import java.util.Optional;
 import java.util.zip.GZIPInputStream;
 
 public class BackupRestoreCommand extends Command {
-    private static final List<String> TYPES = List.of("file", "text", "seed");
-
-    @Override
-    public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
-
-        return runScripted(args);
-    }
-
-    private CommandResult runScripted(ParamsContainer args) {
-        Optional<String> oType = args.stringV(0);
-
-        if (oType.isEmpty() || !TYPES.contains(oType.get()))
-            return CommandResult.error("Type must be 'file', 'text' or 'seed'");
-
-        String type = oType.get();
-        String outputPath = null;
-        int chunkStart = 1;
-
-        if (type.equals("file")) {
-            Optional<String> oOutput = args.stringV(1);
-
-            if (oOutput.isEmpty())
-                return CommandResult.error("Output path not set");
-
-            outputPath = oOutput.get();
-            chunkStart = 2;
-        }
-
-        if (args.size() <= chunkStart)
-            return CommandResult.error("No chunks provided");
-
-        Map<Integer, byte[]> parts = new HashMap<>();
-
-        for (int i = chunkStart; i < args.size(); i++) {
-            int chunkIndex = i - chunkStart + 1;
-            String token = args.stringV(i).orElseThrow();
-
-            if (token.equalsIgnoreCase("null"))
-                continue;
-
-            CommandResult error = resolveChunk(chunkIndex, token, parts);
-
-            if (error != null)
-                return error;
-        }
-
-        if (parts.isEmpty())
-            return CommandResult.error("No chunks provided");
-
-        return finish(type, outputPath, parts);
-    }
-
     private static final List<Prompts.Choice> TYPE_CHOICES = List.of(
             new Prompts.Choice("file", "File", "Restore into a file on disk"),
             new Prompts.Choice("text", "Text", "Restore into plain text"),
             new Prompts.Choice("seed", "Seed", "Restore a BIP-39 mnemonic phrase")
     );
 
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
+    @Override
+    public CommandResult run(ParamsContainer args) {
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        Optional<String> oType = Prompts.askChoice(tw, "Backup source type?", TYPE_CHOICES);
+        return resolve(in);
+    }
+
+    private CommandResult resolve(ArgSource in) {
+        Optional<String> oType = in.choice("Backup source type?", TYPE_CHOICES);
 
         if (oType.isEmpty())
             return CommandResult.error("No input");
@@ -103,7 +55,7 @@ public class BackupRestoreCommand extends Command {
         String outputPath = null;
 
         if (type.equals("file")) {
-            Optional<Path> oOutput = Prompts.askNewFilePath(tw, "Output path for the restored file?");
+            Optional<Path> oOutput = in.newFilePath("Output path for the restored file?");
 
             if (oOutput.isEmpty())
                 return CommandResult.error("No input");
@@ -111,25 +63,44 @@ public class BackupRestoreCommand extends Command {
             outputPath = oOutput.get().toString();
         }
 
-        Optional<Integer> oTotal = Prompts.askInt(tw, "How many chunks were there in total?");
-
-        if (oTotal.isEmpty())
-            return CommandResult.error("No input");
-
         Map<Integer, byte[]> parts = new HashMap<>();
-        Completer chunkCompleter = new Completers.FilesCompleter(Main::getCurrentPath);
 
-        for (int i = 1; i <= oTotal.get(); i++) {
-            Optional<String> oToken = tw.ask(new TerminalQuestion(
-                    "Chunk #" + i + ": file path, hex string, or empty to skip:", null, chunkCompleter));
+        // Scripted mode has no separate "total" argument - the chunk list is however many
+        // positional tokens are left. Interactive mode has to ask for a count up front instead,
+        // since there's no natural end-of-input signal on a single prompt loop.
+        if (in.interactive()) {
+            Optional<Integer> oTotal = in.integer("How many chunks were there in total?");
 
-            if (oToken.isEmpty() || oToken.get().isBlank())
-                continue;
+            if (oTotal.isEmpty())
+                return CommandResult.error("No input");
 
-            CommandResult error = resolveChunk(i, oToken.get().trim(), parts);
+            for (int i = 1; i <= oTotal.get(); i++) {
+                Optional<String> oToken = in.string("Chunk #" + i + ": file path, hex string, or empty to skip:");
 
-            if (error != null)
-                return error;
+                if (oToken.isEmpty())
+                    continue;
+
+                CommandResult error = resolveChunk(i, oToken.get(), parts);
+
+                if (error != null)
+                    return error;
+            }
+        } else {
+            int chunkIndex = 0;
+            Optional<String> oToken;
+
+            while ((oToken = in.string(null)).isPresent()) {
+                chunkIndex++;
+                String token = oToken.get();
+
+                if (token.equalsIgnoreCase("null"))
+                    continue;
+
+                CommandResult error = resolveChunk(chunkIndex, token, parts);
+
+                if (error != null)
+                    return error;
+            }
         }
 
         if (parts.isEmpty())

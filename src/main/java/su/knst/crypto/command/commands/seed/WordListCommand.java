@@ -1,10 +1,12 @@
 package su.knst.crypto.command.commands.seed;
 
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.worldlists.WordLists;
@@ -20,27 +22,11 @@ public class WordListCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        Optional<String> oMode = args.stringV(0);
-        Optional<String> oName = args.stringV(1);
-
-        if (oMode.isEmpty() || !(oMode.get().equals("list") || oMode.get().equals("set")))
-            return CommandResult.error("Mode must be 'list' or 'set'");
-
-        boolean mode = oMode.map(m -> m.equals("list")).get();
-
-        if (!mode && oName.isEmpty())
-            return CommandResult.error("List name not set");
-
-        return mode ? list() : setList(oName.get());
-    }
-
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<String> oMode = Prompts.askChoice(tw, "List available wordlists, or set the active one?", MODE_CHOICES);
+        Optional<String> oMode = in.choice("List available wordlists, or set the active one?", MODE_CHOICES);
 
         if (oMode.isEmpty())
             return CommandResult.error("No input");
@@ -52,7 +38,7 @@ public class WordListCommand extends Command {
                 .map((name) -> new Prompts.Choice(name, name))
                 .toList();
 
-        Optional<String> oName = Prompts.askChoice(tw, "Which wordlist?", nameChoices);
+        Optional<String> oName = in.choice("Which wordlist?", nameChoices);
 
         if (oName.isEmpty())
             return CommandResult.error("No input");

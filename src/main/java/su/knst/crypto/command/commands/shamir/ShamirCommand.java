@@ -2,10 +2,12 @@ package su.knst.crypto.command.commands.shamir;
 
 import com.codahale.shamir.Scheme;
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.Prompts;
@@ -27,122 +29,84 @@ public class ShamirCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        return runScripted(args);
+        return resolve(in);
     }
 
-    private CommandResult runScripted(ParamsContainer args) {
-        Optional<String> oMode = args.stringV(0);
-
-        if (oMode.isEmpty())
-            return CommandResult.error("Mode not set");
-
-        if (!(oMode.get().equals("split") || oMode.get().equals("join")))
-            return CommandResult.error("Mode must be 'split' or 'join'");
-
-        boolean mode = oMode.map((s) -> s.equals("split")).get();
-
-        if (mode) {
-            Optional<Integer> oAllParts = args.intV(1);
-
-            if (oAllParts.isEmpty())
-                return CommandResult.error("All parts not set");
-
-            Optional<Integer> oForRecover = args.intV(2);
-
-            if (oForRecover.isEmpty())
-                return CommandResult.error("Parts for recover not set");
-
-            Optional<Path> oPath = args.stringV(3).map((p) -> Main.getCurrentPath().resolve(p));
-
-            if (oPath.isEmpty())
-                return CommandResult.error("Path not set");
-
-            return split(oAllParts.get(), oForRecover.get(), oPath.get());
-        } else {
-            Optional<Path> oResultPath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
-
-            if (oResultPath.isEmpty())
-                return CommandResult.error("Result path not set");
-
-            HashMap<Integer, byte[]> parts = new HashMap<>();
-
-            try {
-                for (int i = 2; i < args.size(); i++) {
-                    Optional<String> path = args.stringV(i);
-
-                    if (path.isEmpty() || path.get().equals("null"))
-                        continue;
-
-                    parts.put(i - 1, Files.readAllBytes(path.map((p) -> Main.getCurrentPath().resolve(p)).get()));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-
-                return CommandResult.error("Failed to read files");
-            }
-
-            return join(oResultPath.get(), parts);
-        }
-    }
-
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<String> oMode = Prompts.askChoice(tw, "Split a file into parts, or join parts back together?", MODE_CHOICES);
+    private CommandResult resolve(ArgSource in) {
+        Optional<String> oMode = in.choice("Split a file into parts, or join parts back together?", MODE_CHOICES);
 
         if (oMode.isEmpty())
             return CommandResult.error("No input");
 
         if (oMode.get().equals("split")) {
-            Optional<Integer> oAllParts = Prompts.askInt(tw, "Number of all parts (N)?");
+            Optional<Integer> oAllParts = in.integer("Number of all parts (N)?");
 
             if (oAllParts.isEmpty())
                 return CommandResult.error("No input");
 
-            Optional<Integer> oForRecover = Prompts.askInt(tw, "Number of parts required to recover (K)?");
+            Optional<Integer> oForRecover = in.integer("Number of parts required to recover (K)?");
 
             if (oForRecover.isEmpty())
                 return CommandResult.error("No input");
 
-            Optional<Path> oPath = Prompts.askExistingFilePath(tw, "Path to file to split?");
+            Optional<Path> oPath = in.existingFilePath("Path to file to split?");
 
             if (oPath.isEmpty())
                 return CommandResult.error("No input");
 
             return split(oAllParts.get(), oForRecover.get(), oPath.get());
-        } else {
-            Optional<Path> oResultPath = Prompts.askNewFilePath(tw, "Result path for the reconstructed file?");
+        }
 
-            if (oResultPath.isEmpty())
-                return CommandResult.error("No input");
+        Optional<Path> oResultPath = in.newFilePath("Result path for the reconstructed file?");
 
-            Optional<Integer> oTotal = Prompts.askInt(tw, "How many parts were there in total?");
+        if (oResultPath.isEmpty())
+            return CommandResult.error("No input");
 
-            if (oTotal.isEmpty())
-                return CommandResult.error("No input");
+        Map<Integer, byte[]> parts = new HashMap<>();
 
-            Map<Integer, byte[]> parts = new HashMap<>();
+        try {
+            // Scripted mode has no separate "total" argument - the part list is however many
+            // positional tokens are left. Interactive mode has to ask for a count up front
+            // instead, since there's no natural end-of-input signal on a single prompt loop.
+            if (in.interactive()) {
+                Optional<Integer> oTotal = in.integer("How many parts were there in total?");
 
-            for (int i = 1; i <= oTotal.get(); i++) {
-                Optional<Path> oPart = Prompts.askExistingFilePath(tw, "Part #" + i + " file path (empty to skip):");
+                if (oTotal.isEmpty())
+                    return CommandResult.error("No input");
 
-                if (oPart.isEmpty())
-                    continue;
+                for (int i = 1; i <= oTotal.get(); i++) {
+                    Optional<Path> oPart = in.existingFilePath("Part #" + i + " file path (empty to skip):");
 
-                try {
+                    if (oPart.isEmpty())
+                        continue;
+
                     parts.put(i, Files.readAllBytes(oPart.get()));
-                } catch (IOException e) {
-                    e.printStackTrace();
+                }
+            } else {
+                int index = 0;
+                Optional<String> oToken;
 
-                    return CommandResult.error("Failed to read part #" + i);
+                while ((oToken = in.string(null)).isPresent()) {
+                    index++;
+                    String token = oToken.get();
+
+                    if (token.equals("null"))
+                        continue;
+
+                    parts.put(index, Files.readAllBytes(Main.getCurrentPath().resolve(token)));
                 }
             }
+        } catch (IOException e) {
+            e.printStackTrace();
 
-            return join(oResultPath.get(), parts);
+            return CommandResult.error("Failed to read files");
         }
+
+        return join(oResultPath.get(), parts);
     }
 
     private CommandResult split(int allParts, int forRecover, Path path) {

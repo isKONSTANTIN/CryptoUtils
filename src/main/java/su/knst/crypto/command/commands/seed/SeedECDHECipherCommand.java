@@ -1,14 +1,15 @@
 package su.knst.crypto.command.commands.seed;
 
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.SimpleECDHE;
-import su.knst.crypto.utils.TerminalQuestion;
 
 import javax.crypto.*;
 import java.nio.file.Files;
@@ -27,55 +28,25 @@ public class SeedECDHECipherCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        Optional<String> oMode = args.stringV(0);
-        Optional<Path> oPublicKey = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
-        Optional<Path> oPrivateKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
-        Optional<String> oEntropy = args.stringV(3);
-
-        if (oMode.isEmpty() || oPublicKey.isEmpty() || oPrivateKey.isEmpty() || oEntropy.isEmpty())
-            return CommandResult.error("Some argument not set");
-
-        if (!(oMode.get().equals("encrypt") || oMode.get().equals("decrypt")))
-            return CommandResult.error("Mode must be 'encrypt' or 'decrypt'");
-
-        byte[] pubKey;
-        try {
-            pubKey = Files.readAllBytes(oPublicKey.get());
-        } catch (Exception e) {
-            return CommandResult.error("Failed to read public key from file!");
-        }
-
-        byte[] secKey;
-        try {
-            secKey = Files.readAllBytes(oPrivateKey.get());
-        } catch (Exception e) {
-            return CommandResult.error("Failed to read private key from file!");
-        }
-
-        try {
-            return run(oMode.get().equals("encrypt"), pubKey, secKey, Base64.getDecoder().decode(oEntropy.get()));
-        } catch (IllegalArgumentException e) {
-            return CommandResult.error("Invalid base64 entropy: " + e.getMessage());
-        }
+        return resolve(in);
     }
 
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<String> oMode = Prompts.askChoice(tw, "Encrypt or decrypt?", MODE_CHOICES);
+    private CommandResult resolve(ArgSource in) {
+        Optional<String> oMode = in.choice("Encrypt or decrypt?", MODE_CHOICES);
 
         if (oMode.isEmpty())
             return CommandResult.error("No input");
 
-        Optional<Path> oPublicKeyPath = Prompts.askExistingFilePath(tw, "Path to the ECDHE public key?");
+        Optional<Path> oPublicKeyPath = in.existingFilePath("Path to the ECDHE public key?");
 
         if (oPublicKeyPath.isEmpty())
             return CommandResult.error("No input");
 
-        Optional<Path> oPrivateKeyPath = Prompts.askExistingFilePath(tw, "Path to the ECDHE private key?");
+        Optional<Path> oPrivateKeyPath = in.existingFilePath("Path to the ECDHE private key?");
 
         if (oPrivateKeyPath.isEmpty())
             return CommandResult.error("No input");
@@ -94,9 +65,9 @@ public class SeedECDHECipherCommand extends Command {
             return CommandResult.error("Failed to read private key from file!");
         }
 
-        Optional<String> oEntropy = tw.ask(new TerminalQuestion("Base64 entropy (original for encrypt, encrypted for decrypt)?", null));
+        Optional<String> oEntropy = in.string("Base64 entropy (original for encrypt, encrypted for decrypt)?");
 
-        if (oEntropy.isEmpty() || oEntropy.get().isBlank())
+        if (oEntropy.isEmpty())
             return CommandResult.error("No input");
 
         try {

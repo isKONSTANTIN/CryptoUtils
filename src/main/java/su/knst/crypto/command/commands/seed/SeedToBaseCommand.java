@@ -1,12 +1,14 @@
 package su.knst.crypto.command.commands.seed;
 
 import su.knst.crypto.Main;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
-import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.exceptions.WrongMnemonicException;
 
 import java.security.NoSuchAlgorithmException;
@@ -19,20 +21,11 @@ import static su.knst.crypto.utils.MnemonicUtils.*;
 public class SeedToBaseCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        String[] mnemonic = new String[args.size()];
-
-        for (int i = 0; i < mnemonic.length; i++) {
-            mnemonic[i] = args.stringV(i).orElseThrow();
-        }
-
-        return run(mnemonic);
-    }
-
-    private CommandResult runInteractive() {
-        Optional<String[]> oWords = Prompts.askWords(Main.getTerminalWorker(), "Seed words separated by spaces?");
+        Optional<String[]> oWords = in.words("Seed words separated by spaces?");
 
         if (oWords.isEmpty())
             return CommandResult.error("No input");

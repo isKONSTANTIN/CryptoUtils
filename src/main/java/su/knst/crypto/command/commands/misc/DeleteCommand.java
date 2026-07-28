@@ -1,11 +1,13 @@
 package su.knst.crypto.command.commands.misc;
 
 import su.knst.crypto.Main;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
-import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.TerminalQuestion;
 
 import java.io.IOException;
@@ -20,19 +22,11 @@ import java.util.Optional;
 public class DeleteCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        Optional<Path> oFile = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p));
-
-        if (oFile.isEmpty())
-            return CommandResult.plainError("File argument not set");
-
-        return delete(oFile.get());
-    }
-
-    private CommandResult runInteractive() {
-        Optional<Path> oFile = Prompts.askExistingFilePath(Main.getTerminalWorker(), "Path to file to delete?");
+        Optional<Path> oFile = in.existingFilePath("Path to file to delete?");
 
         if (oFile.isEmpty())
             return CommandResult.plainError("No input");

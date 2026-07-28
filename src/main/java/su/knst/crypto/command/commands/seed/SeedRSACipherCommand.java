@@ -1,14 +1,15 @@
 package su.knst.crypto.command.commands.seed;
 
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.SimpleRSA;
-import su.knst.crypto.utils.TerminalQuestion;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -30,42 +31,26 @@ public class SeedRSACipherCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        Optional<String> oMode = args.stringV(0);
-        Optional<String> oEntropy = args.stringV(1);
-        Optional<Path> oKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
-
-        if (oMode.isEmpty() || oKey.isEmpty() || oEntropy.isEmpty())
-            return CommandResult.error("Some argument not set");
-
-        if (!(oMode.get().equals("encrypt") || oMode.get().equals("decrypt") || oMode.get().equals("decrypt_old")))
-            return CommandResult.error("Mode must be 'encrypt', 'decrypt' or 'decrypt_old'");
-
-        byte[] key;
-        try {
-            key = Files.readAllBytes(oKey.get());
-        } catch (Exception e) {
-            return CommandResult.error("Failed to read key from file!");
-        }
-
-        try {
-            return run(oMode.get(), key, Base64.getDecoder().decode(oEntropy.get()));
-        } catch (IllegalArgumentException e) {
-            return CommandResult.error("Invalid base64 entropy: " + e.getMessage());
-        }
+        return resolve(in);
     }
 
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<String> oMode = Prompts.askChoice(tw, "Encrypt or decrypt?", MODE_CHOICES);
+    // Argument order (mode, entropy, key) matches args() and is relied on by scripted callers.
+    private CommandResult resolve(ArgSource in) {
+        Optional<String> oMode = in.choice("Encrypt or decrypt?", MODE_CHOICES);
 
         if (oMode.isEmpty())
             return CommandResult.error("No input");
 
-        Optional<Path> oKeyPath = Prompts.askExistingFilePath(tw, "Path to the RSA key?");
+        Optional<String> oEntropy = in.string("Base64 entropy (original for encrypt, encrypted for decrypt)?");
+
+        if (oEntropy.isEmpty())
+            return CommandResult.error("No input");
+
+        Optional<Path> oKeyPath = in.existingFilePath("Path to the RSA key?");
 
         if (oKeyPath.isEmpty())
             return CommandResult.error("No input");
@@ -76,11 +61,6 @@ public class SeedRSACipherCommand extends Command {
         } catch (Exception e) {
             return CommandResult.error("Failed to read key from file!");
         }
-
-        Optional<String> oEntropy = tw.ask(new TerminalQuestion("Base64 entropy (original for encrypt, encrypted for decrypt)?", null));
-
-        if (oEntropy.isEmpty() || oEntropy.get().isBlank())
-            return CommandResult.error("No input");
 
         try {
             return run(oMode.get(), key, Base64.getDecoder().decode(oEntropy.get().trim()));

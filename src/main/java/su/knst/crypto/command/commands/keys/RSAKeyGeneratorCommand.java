@@ -1,10 +1,12 @@
 package su.knst.crypto.command.commands.keys;
 
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.Prompts;
@@ -27,38 +29,36 @@ public class RSAKeyGeneratorCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        Optional<Path> publicPath = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p));
-        Optional<Path> privatePath = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
-        Optional<Integer> size = args.intV(2);
-
-        if (publicPath.isEmpty() || privatePath.isEmpty())
-            return CommandResult.error("Some argument not set");
-
-        return run(publicPath.get(), privatePath.get(), size.orElse(DEFAULT_SIZE));
-    }
-
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<Path> oPublicPath = Prompts.askNewFilePath(tw, "Public key output path?");
+        Optional<Path> oPublicPath = in.newFilePath("Public key output path?");
 
         if (oPublicPath.isEmpty())
             return CommandResult.error("No input");
 
-        Optional<Path> oPrivatePath = Prompts.askNewFilePath(tw, "Private key output path?");
+        Optional<Path> oPrivatePath = in.newFilePath("Private key output path?");
 
         if (oPrivatePath.isEmpty())
             return CommandResult.error("No input");
 
-        Optional<String> oSize = Prompts.askChoice(tw, "Key size?", SIZE_CHOICES);
+        int size;
 
-        if (oSize.isEmpty())
-            return CommandResult.error("No input");
+        if (in.interactive()) {
+            Optional<String> oSize = in.choice("Key size?", SIZE_CHOICES);
 
-        return run(oPublicPath.get(), oPrivatePath.get(), Integer.parseInt(oSize.get()));
+            if (oSize.isEmpty())
+                return CommandResult.error("No input");
+
+            size = Integer.parseInt(oSize.get());
+        } else {
+            // scripted mode accepts any key size, not just the interactive menu's presets, and
+            // defaults to DEFAULT_SIZE when the (optional, trailing) argument is omitted
+            size = in.integer("Key size?").orElse(DEFAULT_SIZE);
+        }
+
+        return run(oPublicPath.get(), oPrivatePath.get(), size);
     }
 
     public CommandResult run(Path publicPath, Path privatePath, int size) {

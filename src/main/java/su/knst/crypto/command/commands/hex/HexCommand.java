@@ -1,10 +1,12 @@
 package su.knst.crypto.command.commands.hex;
 
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.HexUtils;
@@ -24,48 +26,21 @@ public class HexCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        return runScripted(args);
-    }
-
-    private CommandResult runScripted(ParamsContainer args) {
-        Optional<String> oMode = args.stringV(0);
-
-        if (oMode.isEmpty())
-            return CommandResult.error("Mode not set");
-
-        if (!(oMode.get().equals("encode") || oMode.get().equals("decode")))
-            return CommandResult.error("Mode must be 'encode' or 'decode'");
-
-        Optional<Path> oSource = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
-
-        if (oSource.isEmpty())
-            return CommandResult.error("Source path not set");
-
-        Optional<Path> oResult = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
-
-        if (oResult.isEmpty())
-            return CommandResult.error("Result path not set");
-
-        return convert(oMode.get().equals("encode"), oSource.get(), oResult.get());
-    }
-
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<String> oMode = Prompts.askChoice(tw, "Convert direction?", MODE_CHOICES);
+        Optional<String> oMode = in.choice("Convert direction?", MODE_CHOICES);
 
         if (oMode.isEmpty())
             return CommandResult.error("No input");
 
-        Optional<Path> oSource = Prompts.askExistingFilePath(tw, "Source file path?");
+        Optional<Path> oSource = in.existingFilePath("Source file path?");
 
         if (oSource.isEmpty())
             return CommandResult.error("No input");
 
-        Optional<Path> oResult = Prompts.askNewFilePath(tw, "Result file path?");
+        Optional<Path> oResult = in.newFilePath("Result file path?");
 
         if (oResult.isEmpty())
             return CommandResult.error("No input");

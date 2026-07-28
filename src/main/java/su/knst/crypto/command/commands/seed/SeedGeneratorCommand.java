@@ -1,15 +1,16 @@
 package su.knst.crypto.command.commands.seed;
 
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.Panel;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
-import su.knst.crypto.utils.TerminalQuestion;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -23,25 +24,13 @@ public class SeedGeneratorCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        Optional<String> oBase64 = args.stringV(0);
+        Optional<String> oBase64 = in.string("Base64 seed bytes? (leave empty to generate random entropy)");
 
-        try {
-            return run(Base64.getDecoder().decode(oBase64.orElseThrow()));
-        }catch (IllegalArgumentException e) {
-            return CommandResult.error("Failed to run: " + e.getMessage());
-        }
-    }
-
-    private CommandResult runInteractive() {
-        TerminalWorker tw = Main.getTerminalWorker();
-
-        Optional<String> oBase64 = tw.ask(new TerminalQuestion(
-                "Base64 seed bytes? (leave empty to generate random entropy)", null));
-
-        if (oBase64.isEmpty() || oBase64.get().isBlank())
+        if (oBase64.isEmpty())
             return run();
 
         try {

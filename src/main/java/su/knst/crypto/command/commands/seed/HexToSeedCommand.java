@@ -1,30 +1,27 @@
 package su.knst.crypto.command.commands.seed;
 
 import su.knst.crypto.Main;
+import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.HexUtils;
-import su.knst.crypto.utils.TerminalQuestion;
 
 import java.util.Optional;
 
 public class HexToSeedCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
-        if (args.size() == 0)
-            return runInteractive();
+        ArgSource in = args.size() == 0
+                ? new InteractiveArgSource(Main.getTerminalWorker())
+                : new ScriptedArgSource(args);
 
-        Optional<String> oHex = args.stringV(0);
+        Optional<String> oHex = in.string("Hex entropy string?");
 
-        return run(oHex.orElseThrow());
-    }
-
-    private CommandResult runInteractive() {
-        Optional<String> oHex = Main.getTerminalWorker().ask(new TerminalQuestion("Hex entropy string?", null));
-
-        if (oHex.isEmpty() || oHex.get().isBlank())
+        if (oHex.isEmpty())
             return CommandResult.error("No input");
 
         return run(oHex.get().trim());
