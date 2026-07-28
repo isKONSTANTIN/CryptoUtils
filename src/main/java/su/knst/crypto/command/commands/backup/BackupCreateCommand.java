@@ -250,20 +250,34 @@ public class BackupCreateCommand extends Command {
             // any share is too large to fit a QR code at the current level.
             Map<Integer, BufferedImage> candidate = null;
             ErrorCorrectionLevel fittingLevel = null;
+            boolean decodeFailed = false;
 
             for (ErrorCorrectionLevel level : ERROR_CORRECTION_LEVELS) {
                 candidate = new LinkedHashMap<>();
                 boolean levelFits = true;
 
                 for (int i = 1; i <= allParts; i++) {
+                    BufferedImage image;
+
                     try {
-                        candidate.put(i, ShareCardImage.build(new ShareCardImage.ShareCardData(
+                        image = ShareCardImage.build(new ShareCardImage.ShareCardData(
                                 name, i, allParts, forRecover, createdOn, hexByPart.get(i), checksumByPart.get(i),
-                                typeLabel, level, true)));
+                                typeLabel, level, true));
                     } catch (WriterException e) {
                         levelFits = false;
                         break;
                     }
+
+                    // a share that renders but doesn't decode back to its own hex isn't safe to
+                    // hand out: this is the flaky case the outer attempt loop exists for, so a
+                    // fresh split (not just a lower error-correction level) is the real fix
+                    if (!decodesTo(image, hexByPart.get(i))) {
+                        levelFits = false;
+                        decodeFailed = true;
+                        break;
+                    }
+
+                    candidate.put(i, image);
                 }
 
                 if (levelFits) {
@@ -273,6 +287,9 @@ public class BackupCreateCommand extends Command {
 
                 candidate = null;
             }
+
+            if (candidate == null && decodeFailed)
+                continue;
 
             if (candidate == null) {
                 // no error-correction level was low enough: fall back to QR-less cards (the hex
@@ -297,6 +314,9 @@ public class BackupCreateCommand extends Command {
             images = candidate;
             appliedLevel = fittingLevel;
         }
+
+        if (images == null)
+            return CommandResult.error("Failed to produce reliably readable QR codes after " + MAX_SPLIT_ATTEMPTS + " attempts");
 
         List<Path> written = new ArrayList<>();
 
