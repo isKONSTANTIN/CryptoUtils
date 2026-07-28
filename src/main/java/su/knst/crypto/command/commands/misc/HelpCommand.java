@@ -1,5 +1,7 @@
 package su.knst.crypto.command.commands.misc;
 
+import org.jline.utils.AttributedStringBuilder;
+import org.jline.utils.AttributedStyle;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
@@ -36,19 +38,16 @@ public class HelpCommand extends Command {
             if (grouped.isEmpty())
                 continue;
 
-            int width = grouped.stream().mapToInt(e -> e.getKey().length()).max().orElse(0);
+            int nameWidth = grouped.stream().mapToInt(e -> e.getKey().length()).max().orElse(0);
 
-            builder.append("\n-- ").append(entry.getKey().title).append(" --\n");
-
+            List<String> lines = new ArrayList<>();
             for (Map.Entry<String, List<String>> group : grouped) {
                 Command command = commands.get(group.getValue().get(0));
 
-                builder.append("  ")
-                        .append(padRight(group.getKey(), width))
-                        .append("  ")
-                        .append(command.description())
-                        .append("\n");
+                lines.add(padRight(group.getKey(), nameWidth) + "  " + command.description());
             }
+
+            builder.append("\n").append(box(entry.getKey().title, lines, colorFor(entry.getKey()))).append("\n");
         }
 
         builder.append("\nType 'help <command>' for detailed usage.\n");
@@ -104,6 +103,45 @@ public class HelpCommand extends Command {
             result.add(Map.entry(String.join(", ", aliasGroup), aliasGroup));
 
         return result;
+    }
+
+    private static AttributedStyle colorFor(CommandTag tag) {
+        return switch (tag) {
+            case MISC -> AttributedStyle.DEFAULT.foreground(AttributedStyle.WHITE);
+            case BACKUPS -> AttributedStyle.DEFAULT.foreground(AttributedStyle.BLUE).bold();
+            case CRYPTOGRAPHY -> AttributedStyle.DEFAULT.foreground(AttributedStyle.CYAN).bold();
+            case CRYPTOCURRENCIES -> AttributedStyle.DEFAULT.foreground(AttributedStyle.GREEN).bold();
+        };
+    }
+
+    private static String box(String title, List<String> lines, AttributedStyle frameStyle) {
+        int width = title.length();
+        for (String line : lines)
+            width = Math.max(width, line.length());
+
+        String horizontal = "─".repeat(width + 2);
+
+        AttributedStringBuilder result = new AttributedStringBuilder();
+
+        result.style(frameStyle);
+        result.append("┌").append(horizontal).append("┐\n");
+        result.append("│ ").append(padRight(title, width)).append(" │\n");
+        result.append("├").append(horizontal).append("┤\n");
+
+        for (String line : lines) {
+            result.style(frameStyle);
+            result.append("│ ");
+            result.style(AttributedStyle.DEFAULT);
+            result.append(padRight(line, width));
+            result.style(frameStyle);
+            result.append(" │\n");
+        }
+
+        result.style(frameStyle);
+        result.append("└").append(horizontal).append("┘");
+        result.style(AttributedStyle.DEFAULT);
+
+        return result.toAnsi();
     }
 
     private static String padRight(String text, int width) {

@@ -4,7 +4,7 @@ plugins {
 }
 
 group 'su.knrg.crypto'
-version '0.4.0'
+version '1.0.0'
 mainClassName = 'su.knst.crypto.Main'
 
 sourceSets {
@@ -34,8 +34,6 @@ dependencies {
 
     include group: 'com.codahale', name: 'shamir', version: '0.7.0'
     include group: 'org.jline', name: 'jline', version: '3.22.0'
-    include group: 'org.jline', name: 'jline-terminal-jansi', version: '3.22.0'
-    include group: 'org.jline', name: 'jline-reader', version: '3.22.0'
 
     configurations.implementation.extendsFrom(configurations.include)
 }
@@ -59,6 +57,7 @@ jar {
 
     manifest {
         attributes 'Main-Class': mainClassName,
-                   'Implementation-Version': version
+                   'Implementation-Version': version,
+                   'Enable-Native-Access': 'ALL-UNNAMED'
     }
 }

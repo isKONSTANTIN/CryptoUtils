@@ -95,6 +95,12 @@ public class TerminalWorker {
         writer.println(Banner.render(terminal));
         writer.println(handler.run("help").message());
 
+        terminal.handle(Terminal.Signal.WINCH, signal -> {
+            writer.println(Banner.render(terminal));
+            writer.flush();
+            reader.callWidget(LineReader.REDISPLAY);
+        });
+
         while (run) {
             String line;
 

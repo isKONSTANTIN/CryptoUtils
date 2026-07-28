@@ -80,7 +80,7 @@ public class SeedRSACipherCommand extends Command {
 
     @Override
     public String description() {
-        return "Encrypt/decrypt entropy by RSA ('decrypt_old' reads backups made before the switch to OAEP padding)";
+        return "Encrypt/decrypt entropy by RSA";
     }
 
     @Override
