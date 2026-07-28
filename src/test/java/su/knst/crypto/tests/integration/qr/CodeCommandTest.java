@@ -7,7 +7,6 @@ import su.knst.crypto.Main;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.qr.CodeCommand;
-import su.knst.crypto.command.commands.qr.ErrorCorrectionLevelsCommand;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -64,17 +63,6 @@ class CodeCommandTest {
         CommandResult result = command.run(new ParamsContainer("fly", QR_FILE_PATH.toString()));
 
         assertTrue(result.error());
-    }
-
-    @Test
-    void listsErrorCorrectionLevels() {
-        ErrorCorrectionLevelsCommand command = main.getHandler().getCommand(ErrorCorrectionLevelsCommand.class).orElseThrow();
-
-        CommandResult result = command.run(new ParamsContainer());
-
-        assertFalse(result.error());
-        assertTrue(result.message().contains("l"));
-        assertTrue(result.message().contains("h"));
     }
 
     @AfterAll

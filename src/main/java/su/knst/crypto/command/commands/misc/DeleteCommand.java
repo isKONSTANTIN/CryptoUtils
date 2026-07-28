@@ -1,13 +1,12 @@
 package su.knst.crypto.command.commands.misc;
 
-import org.jline.builtins.Completers;
 import su.knst.crypto.Main;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.TerminalQuestion;
-import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -21,13 +20,27 @@ import java.util.Optional;
 public class DeleteCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
+        if (args.size() == 0)
+            return runInteractive();
+
         Optional<Path> oFile = args.stringV(0).map((p) -> Main.getCurrentPath().resolve(p));
 
         if (oFile.isEmpty())
             return CommandResult.plainError("File argument not set");
 
-        Path target = oFile.get();
+        return delete(oFile.get());
+    }
 
+    private CommandResult runInteractive() {
+        Optional<Path> oFile = Prompts.askExistingFilePath(Main.getTerminalWorker(), "Path to file to delete?");
+
+        if (oFile.isEmpty())
+            return CommandResult.plainError("No input");
+
+        return delete(oFile.get());
+    }
+
+    private CommandResult delete(Path target) {
         if (!target.toFile().exists() || !target.toFile().isFile())
             return CommandResult.plain("File not exists");
 
@@ -73,14 +86,6 @@ public class DeleteCommand extends Command {
     @Override
     public String args() {
         return "<file>";
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
-        return ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-
-                .build();
     }
 
     @Override

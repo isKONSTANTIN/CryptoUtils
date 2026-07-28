@@ -1,13 +1,14 @@
 package su.knst.crypto.command.commands.seed;
 
-import org.jline.builtins.Completers;
 import su.knst.crypto.Main;
+import su.knst.crypto.TerminalWorker;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.SimpleECDHE;
-import su.knst.crypto.utils.args.ArgsTreeBuilder;
+import su.knst.crypto.utils.TerminalQuestion;
 
 import javax.crypto.*;
 import java.nio.file.Files;
@@ -15,11 +16,20 @@ import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 public class SeedECDHECipherCommand extends Command {
+    private static final List<Prompts.Choice> MODE_CHOICES = List.of(
+            new Prompts.Choice("encrypt", "Encrypt", "Encrypt entropy with a shared ECDHE secret"),
+            new Prompts.Choice("decrypt", "Decrypt", "Decrypt entropy with a shared ECDHE secret")
+    );
+
     @Override
     public CommandResult run(ParamsContainer args) {
+        if (args.size() == 0)
+            return runInteractive();
+
         Optional<String> oMode = args.stringV(0);
         Optional<Path> oPublicKey = args.stringV(1).map((p) -> Main.getCurrentPath().resolve(p));
         Optional<Path> oPrivateKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
@@ -45,7 +55,55 @@ public class SeedECDHECipherCommand extends Command {
             return CommandResult.error("Failed to read private key from file!");
         }
 
-        return run(oMode.get().equals("encrypt"), pubKey, secKey, Base64.getDecoder().decode(oEntropy.get()));
+        try {
+            return run(oMode.get().equals("encrypt"), pubKey, secKey, Base64.getDecoder().decode(oEntropy.get()));
+        } catch (IllegalArgumentException e) {
+            return CommandResult.error("Invalid base64 entropy: " + e.getMessage());
+        }
+    }
+
+    private CommandResult runInteractive() {
+        TerminalWorker tw = Main.getTerminalWorker();
+
+        Optional<String> oMode = Prompts.askChoice(tw, "Encrypt or decrypt?", MODE_CHOICES);
+
+        if (oMode.isEmpty())
+            return CommandResult.error("No input");
+
+        Optional<Path> oPublicKeyPath = Prompts.askExistingFilePath(tw, "Path to the ECDHE public key?");
+
+        if (oPublicKeyPath.isEmpty())
+            return CommandResult.error("No input");
+
+        Optional<Path> oPrivateKeyPath = Prompts.askExistingFilePath(tw, "Path to the ECDHE private key?");
+
+        if (oPrivateKeyPath.isEmpty())
+            return CommandResult.error("No input");
+
+        byte[] pubKey;
+        try {
+            pubKey = Files.readAllBytes(oPublicKeyPath.get());
+        } catch (Exception e) {
+            return CommandResult.error("Failed to read public key from file!");
+        }
+
+        byte[] secKey;
+        try {
+            secKey = Files.readAllBytes(oPrivateKeyPath.get());
+        } catch (Exception e) {
+            return CommandResult.error("Failed to read private key from file!");
+        }
+
+        Optional<String> oEntropy = tw.ask(new TerminalQuestion("Base64 entropy (original for encrypt, encrypted for decrypt)?", null));
+
+        if (oEntropy.isEmpty() || oEntropy.get().isBlank())
+            return CommandResult.error("No input");
+
+        try {
+            return run(oMode.get().equals("encrypt"), pubKey, secKey, Base64.getDecoder().decode(oEntropy.get().trim()));
+        } catch (IllegalArgumentException e) {
+            return CommandResult.error("Invalid base64 entropy: " + e.getMessage());
+        }
     }
 
     public CommandResult run(boolean mode, byte[] publicKeyBytes, byte[] privateKeyBytes, byte[] entropy) {
@@ -94,38 +152,12 @@ public class SeedECDHECipherCommand extends Command {
 
     @Override
     public String description() {
-        return "Encrypt/decrypt entropy by ECDHE";
+        return "Encrypt or decrypt seed entropy using an ECDHE shared secret derived from two key pairs";
     }
 
     @Override
     public String args() {
         return "<encrypt/decrypt> <public ECDHE key path> <private ECDHE key path> <base64 original/encrypted ECDHE entropy>";
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
-        return ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .subTree().addPossibleArg("encrypt")
-
-                .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-                .addTip("<base64 original entropy>", "Seed entropy")
-                .parent()
-
-                .parent()
-
-                .subTree().addPossibleArg("decrypt")
-
-                .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-                .addTip("<base64 encrypted ECDHE entropy>", "Encrypted ECDHE seed entropy")
-                .parent()
-
-                .parent()
-
-                .build();
     }
 
     @Override

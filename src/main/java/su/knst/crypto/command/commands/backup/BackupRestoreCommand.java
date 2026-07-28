@@ -2,6 +2,7 @@ package su.knst.crypto.command.commands.backup;
 
 import com.codahale.shamir.Scheme;
 import org.jline.builtins.Completers;
+import org.jline.reader.Completer;
 import su.knst.crypto.Main;
 import su.knst.crypto.TerminalWorker;
 import su.knst.crypto.command.Command;
@@ -13,8 +14,8 @@ import su.knst.crypto.command.commands.seed.SeedGeneratorCommand;
 import su.knst.crypto.utils.FileUtils;
 import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
+import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.TerminalQuestion;
-import su.knst.crypto.utils.args.ArgsTreeBuilder;
 import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
 
 import java.io.ByteArrayInputStream;
@@ -84,10 +85,16 @@ public class BackupRestoreCommand extends Command {
         return finish(type, outputPath, parts);
     }
 
+    private static final List<Prompts.Choice> TYPE_CHOICES = List.of(
+            new Prompts.Choice("file", "File", "Restore into a file on disk"),
+            new Prompts.Choice("text", "Text", "Restore into plain text"),
+            new Prompts.Choice("seed", "Seed", "Restore a BIP-39 mnemonic phrase")
+    );
+
     private CommandResult runInteractive() {
         TerminalWorker tw = Main.getTerminalWorker();
 
-        Optional<String> oType = tw.ask(new TerminalQuestion("Backup source type?", TYPES));
+        Optional<String> oType = Prompts.askChoice(tw, "Backup source type?", TYPE_CHOICES);
 
         if (oType.isEmpty())
             return CommandResult.error("No input");
@@ -96,24 +103,25 @@ public class BackupRestoreCommand extends Command {
         String outputPath = null;
 
         if (type.equals("file")) {
-            Optional<String> oOutput = tw.ask(new TerminalQuestion("Output path for the restored file?", null));
+            Optional<Path> oOutput = Prompts.askNewFilePath(tw, "Output path for the restored file?");
 
-            if (oOutput.isEmpty() || oOutput.get().isBlank())
+            if (oOutput.isEmpty())
                 return CommandResult.error("No input");
 
-            outputPath = oOutput.get().trim();
+            outputPath = oOutput.get().toString();
         }
 
-        Optional<Integer> oTotal = askInt(tw, "How many chunks were there in total?");
+        Optional<Integer> oTotal = Prompts.askInt(tw, "How many chunks were there in total?");
 
         if (oTotal.isEmpty())
             return CommandResult.error("No input");
 
         Map<Integer, byte[]> parts = new HashMap<>();
+        Completer chunkCompleter = new Completers.FilesCompleter(Main::getCurrentPath);
 
         for (int i = 1; i <= oTotal.get(); i++) {
             Optional<String> oToken = tw.ask(new TerminalQuestion(
-                    "Chunk #" + i + ": file path, hex string, or empty to skip:", null));
+                    "Chunk #" + i + ": file path, hex string, or empty to skip:", null, chunkCompleter));
 
             if (oToken.isEmpty() || oToken.get().isBlank())
                 continue;
@@ -171,6 +179,12 @@ public class BackupRestoreCommand extends Command {
             return CommandResult.error("Failed to reconstruct secret: " + e.getMessage());
         }
 
+        try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(secret))) {
+            secret = gzip.readAllBytes();
+        } catch (IOException e) {
+            return CommandResult.error("Failed to decompress recovered data: " + e.getMessage());
+        }
+
         switch (type) {
             case "file" -> {
                 try {
@@ -182,22 +196,7 @@ public class BackupRestoreCommand extends Command {
                 return CommandResult.of("Restored file written to " + outputPath);
             }
             case "text" -> {
-                String text;
-
-                try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(secret))) {
-                    text = new String(gzip.readAllBytes(), StandardCharsets.UTF_8);
-                } catch (IOException e) {
-                    if (!isBinary(secret)) {
-                        return CommandResultBuilder.builder()
-                                .line("Warning: recovered data is not gzip-compressed, showing raw text instead")
-                                .line(new String(secret, StandardCharsets.UTF_8))
-                                .build();
-                    }
-
-                    return CommandResult.error("Failed to decompress recovered text: " + e.getMessage());
-                }
-
-                return CommandResult.of(text);
+                return CommandResult.of(new String(secret, StandardCharsets.UTF_8));
             }
             case "seed" -> {
                 String[] words;
@@ -219,45 +218,6 @@ public class BackupRestoreCommand extends Command {
         }
     }
 
-    // heuristic: valid, strict UTF-8 with no control characters other than common whitespace
-    private static boolean isBinary(byte[] data) {
-        String decoded;
-
-        try {
-            decoded = StandardCharsets.UTF_8.newDecoder()
-                    .onMalformedInput(java.nio.charset.CodingErrorAction.REPORT)
-                    .onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT)
-                    .decode(java.nio.ByteBuffer.wrap(data))
-                    .toString();
-        } catch (java.nio.charset.CharacterCodingException e) {
-            return true;
-        }
-
-        for (int i = 0; i < decoded.length(); i++) {
-            char c = decoded.charAt(i);
-
-            if (Character.isISOControl(c) && c != '\n' && c != '\r' && c != '\t')
-                return true;
-        }
-
-        return false;
-    }
-
-    private static Optional<Integer> askInt(TerminalWorker tw, String question) {
-        while (true) {
-            Optional<String> answer = tw.ask(new TerminalQuestion(question, null));
-
-            if (answer.isEmpty())
-                return Optional.empty();
-
-            try {
-                return Optional.of(Integer.parseInt(answer.get().trim()));
-            } catch (NumberFormatException ignored) {
-                // ask again
-            }
-        }
-    }
-
     @Override
     public String description() {
         return "Reconstruct a file, text or seed phrase from Shamir shares recovered from QR codes or manually entered hex";
@@ -271,18 +231,5 @@ public class BackupRestoreCommand extends Command {
     @Override
     public CommandTag tag() {
         return CommandTag.BACKUPS;
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
-        return ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .subTree().addPossibleArgs("file", "text", "seed")
-
-                .recursiveSubTree()
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-                .parent()
-
-                .parent()
-                .build();
     }
 }

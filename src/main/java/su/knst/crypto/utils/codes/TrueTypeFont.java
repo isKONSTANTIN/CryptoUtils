@@ -30,7 +30,7 @@ public final class TrueTypeFont {
     private final int numGlyphs;
     private final int[] loca;
     private final int glyfOffset;
-    private final int advanceWidth;
+    private final int[] hmtxAdvances;
     private final Map<Integer, Integer> cmap;
     private final Map<Integer, GeneralPath> glyphCache = new HashMap<>();
 
@@ -64,7 +64,7 @@ public final class TrueTypeFont {
         int numberOfHMetrics = data.getShort(hhea[0] + 34) & 0xFFFF;
 
         int[] hmtx = require("hmtx");
-        advanceWidth = numberOfHMetrics > 0 ? (data.getShort(hmtx[0]) & 0xFFFF) : unitsPerEm;
+        hmtxAdvances = parseHmtx(hmtx[0], numberOfHMetrics, numGlyphs);
 
         int[] glyfTable = require("glyf");
         glyfOffset = glyfTable[0];
@@ -94,8 +94,13 @@ public final class TrueTypeFont {
         return descender;
     }
 
-    public int advanceWidth() {
-        return advanceWidth;
+    public int advanceWidth(char c) {
+        Integer glyphId = cmap.get((int) c);
+
+        if (glyphId == null || glyphId < 0 || glyphId >= hmtxAdvances.length)
+            return hmtxAdvances.length > 0 ? hmtxAdvances[hmtxAdvances.length - 1] : 0;
+
+        return hmtxAdvances[glyphId];
     }
 
     public GeneralPath glyphPath(char c) {
@@ -105,6 +110,25 @@ public final class TrueTypeFont {
             return new GeneralPath();
 
         return glyphCache.computeIfAbsent(glyphId, this::parseGlyph);
+    }
+
+    // OpenType rule: hmtx stores an (advanceWidth, lsb) pair for the first numberOfHMetrics
+    // glyphs; every glyph after that has no advanceWidth entry of its own and reuses the last one.
+    private int[] parseHmtx(int offset, int numberOfHMetrics, int numGlyphs) {
+        int[] advances = new int[numGlyphs];
+        int last = 0;
+        int pos = offset;
+
+        for (int i = 0; i < numGlyphs; i++) {
+            if (i < numberOfHMetrics) {
+                last = data.getShort(pos) & 0xFFFF;
+                pos += 4;
+            }
+
+            advances[i] = last;
+        }
+
+        return advances;
     }
 
     private int[] parseLoca(int offset, int format) {

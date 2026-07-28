@@ -1,6 +1,7 @@
 package su.knst.crypto.command.commands.seed;
 
-import org.jline.builtins.Completers;
+import su.knst.crypto.Main;
+import su.knst.crypto.TerminalWorker;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.Panel;
@@ -8,7 +9,7 @@ import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
-import su.knst.crypto.utils.args.ArgsTreeBuilder;
+import su.knst.crypto.utils.TerminalQuestion;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -22,11 +23,30 @@ public class SeedGeneratorCommand extends Command {
 
     @Override
     public CommandResult run(ParamsContainer args) {
+        if (args.size() == 0)
+            return runInteractive();
+
         Optional<String> oBase64 = args.stringV(0);
 
         try {
-            return oBase64.isPresent() ? run(Base64.getDecoder().decode(oBase64.get())) : run();
+            return run(Base64.getDecoder().decode(oBase64.orElseThrow()));
         }catch (IllegalArgumentException e) {
+            return CommandResult.error("Failed to run: " + e.getMessage());
+        }
+    }
+
+    private CommandResult runInteractive() {
+        TerminalWorker tw = Main.getTerminalWorker();
+
+        Optional<String> oBase64 = tw.ask(new TerminalQuestion(
+                "Base64 seed bytes? (leave empty to generate random entropy)", null));
+
+        if (oBase64.isEmpty() || oBase64.get().isBlank())
+            return run();
+
+        try {
+            return run(Base64.getDecoder().decode(oBase64.get().trim()));
+        } catch (IllegalArgumentException e) {
             return CommandResult.error("Failed to run: " + e.getMessage());
         }
     }
@@ -95,7 +115,7 @@ public class SeedGeneratorCommand extends Command {
         }
 
         if (mnemonic24 != null)
-            result.append("24-word seed:\n").append(formatter.format(mnemonic24));
+            result.append("\n24-word seed:\n").append(formatter.format(mnemonic24));
 
         return result.toString();
     }
@@ -143,20 +163,12 @@ public class SeedGeneratorCommand extends Command {
 
     @Override
     public String description() {
-        return "Generate or restore 12 and 24 seed phrase";
+        return "Generate a fresh random 12/24-word seed phrase, or restore one from base64-encoded entropy";
     }
 
     @Override
     public String args() {
         return "[base64 string]";
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
-        return ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .addTip("[base64 string]", "Seed bytes in base64")
-
-                .build();
     }
 
     @Override

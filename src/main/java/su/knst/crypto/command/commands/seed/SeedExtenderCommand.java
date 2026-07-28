@@ -1,20 +1,18 @@
 package su.knst.crypto.command.commands.seed;
 
-import org.jline.builtins.Completers;
-import org.jline.reader.Candidate;
-import org.jline.reader.Completer;
+import su.knst.crypto.Main;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.MnemonicUtils;
-import su.knst.crypto.utils.args.ArgsTreeBuilder;
+import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.exceptions.WrongMnemonicException;
-import su.knst.crypto.utils.worldlists.WordLists;
 
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Optional;
 
 import static su.knst.crypto.command.commands.seed.SeedGeneratorCommand.formatBits;
 import static su.knst.crypto.utils.MnemonicUtils.*;
@@ -22,6 +20,8 @@ import static su.knst.crypto.utils.MnemonicUtils.*;
 public class SeedExtenderCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
+        if (args.size() == 0)
+            return runInteractive();
 
         if (args.size() != 12)
             return CommandResult.error("Wrong mnemonic size");
@@ -31,6 +31,22 @@ public class SeedExtenderCommand extends Command {
         for (int i = 0; i < args.size(); i++)
             mnemonic[i] = args.stringV(i).orElseThrow();
 
+        return run(mnemonic);
+    }
+
+    private CommandResult runInteractive() {
+        Optional<String[]> oWords = Prompts.askWords(Main.getTerminalWorker(), "12 seed words separated by spaces?");
+
+        if (oWords.isEmpty())
+            return CommandResult.error("No input");
+
+        if (oWords.get().length != 12)
+            return CommandResult.error("Wrong mnemonic size");
+
+        return run(oWords.get());
+    }
+
+    private CommandResult run(String[] mnemonic) {
         try {
             checkMnemonic(mnemonic);
         } catch (WrongMnemonicException | NoSuchAlgorithmException e) {
@@ -70,35 +86,16 @@ public class SeedExtenderCommand extends Command {
 
     @Override
     public String description() {
-        return "Extend 12-word to 24-word seed by putting hash sum at entropy";
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
-        ArgsTreeBuilder builder = ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .recursiveSubTree();
-
-        Completer completer = (reader, line, candidates) ->
-                candidates.addAll(
-                        Arrays.stream(WordLists.getActiveList().array())
-                                .filter(s -> s.contains(line.word()))
-                                .map(Candidate::new)
-                                .toList()
-                );
-
-        for(int i = 0; i < 12; i++)
-            builder.addCompleter(completer);
-
-        return builder.parent().build();
-    }
-
-    @Override
-    public CommandTag tag() {
-        return CommandTag.CRYPTOCURRENCIES;
+        return "Extend a 12-word seed phrase to a 24-word one by putting a checksum hash into the entropy";
     }
 
     @Override
     public String args() {
         return "<word_1> <word_2> ...";
+    }
+
+    @Override
+    public CommandTag tag() {
+        return CommandTag.CRYPTOCURRENCIES;
     }
 }

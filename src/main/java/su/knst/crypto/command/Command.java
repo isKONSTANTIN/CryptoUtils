@@ -22,4 +22,10 @@ public abstract class Command {
     public CommandTag tag() {
         return CommandTag.MISC;
     }
+
+    // Commands returning true keep parsing arguments typed inline on the REPL line (e.g. help,
+    // cd, exit) - everything else always drops into its own interactive prompt flow instead.
+    public boolean supportsInlineArgs() {
+        return false;
+    }
 }

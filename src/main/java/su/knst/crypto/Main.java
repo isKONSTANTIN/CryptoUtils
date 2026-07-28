@@ -13,7 +13,6 @@ import su.knst.crypto.command.commands.hex.HexCommand;
 import su.knst.crypto.command.commands.keys.ECDHEKeyGeneratorCommand;
 import su.knst.crypto.command.commands.keys.RSAKeyGeneratorCommand;
 import su.knst.crypto.command.commands.qr.CodeCommand;
-import su.knst.crypto.command.commands.qr.ErrorCorrectionLevelsCommand;
 import su.knst.crypto.command.commands.seed.*;
 import su.knst.crypto.command.commands.shamir.ShamirCommand;
 import su.knst.crypto.utils.codes.SimplePDF417Worker;
@@ -65,7 +64,6 @@ public class Main {
 
         handler.registerCommand("qr", new CodeCommand(new SimpleQRCodeWorker()));
         handler.registerCommand("pdf417", new CodeCommand(new SimplePDF417Worker()));
-        handler.registerCommand("ecl", new ErrorCorrectionLevelsCommand());
         handler.registerCommand("shamir", new ShamirCommand());
         handler.registerCommand("hex", new HexCommand());
 

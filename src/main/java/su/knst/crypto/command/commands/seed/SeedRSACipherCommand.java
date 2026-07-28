@@ -1,13 +1,14 @@
 package su.knst.crypto.command.commands.seed;
 
-import org.jline.builtins.Completers;
 import su.knst.crypto.Main;
+import su.knst.crypto.TerminalWorker;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.SimpleRSA;
-import su.knst.crypto.utils.args.ArgsTreeBuilder;
+import su.knst.crypto.utils.TerminalQuestion;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
@@ -17,11 +18,21 @@ import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 public class SeedRSACipherCommand extends Command {
+    private static final List<Prompts.Choice> MODE_CHOICES = List.of(
+            new Prompts.Choice("encrypt", "Encrypt", "Encrypt entropy with an RSA public key"),
+            new Prompts.Choice("decrypt", "Decrypt", "Decrypt entropy with an RSA private key"),
+            new Prompts.Choice("decrypt_old", "Decrypt (legacy)", "Decrypt entropy encrypted with the old PKCS#1 v1.5 padding")
+    );
+
     @Override
     public CommandResult run(ParamsContainer args) {
+        if (args.size() == 0)
+            return runInteractive();
+
         Optional<String> oMode = args.stringV(0);
         Optional<String> oEntropy = args.stringV(1);
         Optional<Path> oKey = args.stringV(2).map((p) -> Main.getCurrentPath().resolve(p));
@@ -39,7 +50,43 @@ public class SeedRSACipherCommand extends Command {
             return CommandResult.error("Failed to read key from file!");
         }
 
-        return run(oMode.get(), key, Base64.getDecoder().decode(oEntropy.get()));
+        try {
+            return run(oMode.get(), key, Base64.getDecoder().decode(oEntropy.get()));
+        } catch (IllegalArgumentException e) {
+            return CommandResult.error("Invalid base64 entropy: " + e.getMessage());
+        }
+    }
+
+    private CommandResult runInteractive() {
+        TerminalWorker tw = Main.getTerminalWorker();
+
+        Optional<String> oMode = Prompts.askChoice(tw, "Encrypt or decrypt?", MODE_CHOICES);
+
+        if (oMode.isEmpty())
+            return CommandResult.error("No input");
+
+        Optional<Path> oKeyPath = Prompts.askExistingFilePath(tw, "Path to the RSA key?");
+
+        if (oKeyPath.isEmpty())
+            return CommandResult.error("No input");
+
+        byte[] key;
+        try {
+            key = Files.readAllBytes(oKeyPath.get());
+        } catch (Exception e) {
+            return CommandResult.error("Failed to read key from file!");
+        }
+
+        Optional<String> oEntropy = tw.ask(new TerminalQuestion("Base64 entropy (original for encrypt, encrypted for decrypt)?", null));
+
+        if (oEntropy.isEmpty() || oEntropy.get().isBlank())
+            return CommandResult.error("No input");
+
+        try {
+            return run(oMode.get(), key, Base64.getDecoder().decode(oEntropy.get().trim()));
+        } catch (IllegalArgumentException e) {
+            return CommandResult.error("Invalid base64 entropy: " + e.getMessage());
+        }
     }
 
     public CommandResult run(boolean mode, byte[] bytesKey, byte[] entropy) {
@@ -80,45 +127,12 @@ public class SeedRSACipherCommand extends Command {
 
     @Override
     public String description() {
-        return "Encrypt/decrypt entropy by RSA";
+        return "Encrypt or decrypt seed entropy using an RSA key pair";
     }
 
     @Override
     public String args() {
         return "<encrypt/decrypt/decrypt_old> <base64 original/encrypted RSA entropy> <public/private RSA key path>";
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
-        return ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .subTree().addPossibleArg("encrypt")
-
-                .recursiveSubTree()
-                .addTip("<base64 original entropy>", "Seed entropy")
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-                .parent()
-
-                .parent()
-
-                .subTree().addPossibleArg("decrypt")
-
-                .recursiveSubTree()
-                .addTip("<base64 encrypted RSA entropy>", "RSA seed entropy")
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-                .parent()
-
-                .parent()
-
-                .subTree().addPossibleArg("decrypt_old")
-
-                .recursiveSubTree()
-                .addTip("<base64 encrypted RSA entropy>", "RSA seed entropy (legacy PKCS#1 v1.5)")
-                .addCompleter(new Completers.FilesCompleter(Main::getCurrentPath))
-                .parent()
-
-                .parent()
-
-                .build();
     }
 
     @Override

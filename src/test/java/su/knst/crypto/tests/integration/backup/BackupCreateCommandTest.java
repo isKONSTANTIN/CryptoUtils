@@ -8,6 +8,7 @@ import su.knst.crypto.Main;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.backup.BackupCreateCommand;
+import su.knst.crypto.tests.util.BackupTestFiles;
 import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
 import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
@@ -60,7 +61,11 @@ class BackupCreateCommandTest {
         for (int i = 1; i <= k; i++)
             parts.put(i, decodeChunk(name, i));
 
-        return new Scheme(new SecureRandom(), n, k).join(parts);
+        byte[] joined = new Scheme(new SecureRandom(), n, k).join(parts);
+
+        try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(joined))) {
+            return gzip.readAllBytes();
+        }
     }
 
     @Test
@@ -82,6 +87,7 @@ class BackupCreateCommandTest {
         CommandResult result = command.run(new ParamsContainer("file", name, String.valueOf(n), String.valueOf(k), source.toString()));
 
         assertFalse(result.error(), result.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
         for (int i = 1; i <= n; i++)
             assertTrue(Path.of(name + "_" + i + ".png").toFile().isFile());
@@ -108,13 +114,11 @@ class BackupCreateCommandTest {
         CommandResult result = command.run(new ParamsContainer(args));
 
         assertFalse(result.error(), result.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
         byte[] recovered = reconstruct(name, n, k);
 
-        String decompressed;
-        try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(recovered))) {
-            decompressed = new String(gzip.readAllBytes(), StandardCharsets.UTF_8);
-        }
+        String decompressed = new String(recovered, StandardCharsets.UTF_8);
 
         assertEquals(text, decompressed);
     }
@@ -139,6 +143,7 @@ class BackupCreateCommandTest {
         CommandResult result = command.run(new ParamsContainer(args));
 
         assertFalse(result.error(), result.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
         byte[] recovered = reconstruct(name, n, k);
 
@@ -181,7 +186,7 @@ class BackupCreateCommandTest {
     }
 
     @Test
-    void secretTooLargeForQrCapacityIsErrorWithNoFilesWritten() throws IOException {
+    void secretTooLargeForQrFallsBackToCardsWithoutQr() throws Exception {
         byte[] content = new byte[10_000];
         random.nextBytes(content);
 
@@ -190,12 +195,23 @@ class BackupCreateCommandTest {
         Files.write(source, content);
 
         String name = "backup_create_test_huge";
+        int n = 3, k = 2;
+
+        for (int i = 1; i <= n; i++)
+            filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
-        CommandResult result = command.run(new ParamsContainer("file", name, "3", "2", source.toString()));
+        CommandResult result = command.run(new ParamsContainer("file", name, String.valueOf(n), String.valueOf(k), source.toString()));
 
-        assertTrue(result.error());
-        assertFalse(Path.of(name + "_1.png").toFile().exists());
+        assertFalse(result.error(), result.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
+
+        for (int i = 1; i <= n; i++) {
+            Path path = Path.of(name + "_" + i + ".png");
+
+            assertTrue(path.toFile().isFile());
+            assertNull(new SimpleQRCodeWorker().readCode(path.toString()));
+        }
     }
 
     @Test

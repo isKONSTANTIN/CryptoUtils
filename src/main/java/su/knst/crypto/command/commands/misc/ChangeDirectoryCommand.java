@@ -39,4 +39,9 @@ public class ChangeDirectoryCommand extends Command {
 
                 .build();
     }
+
+    @Override
+    public boolean supportsInlineArgs() {
+        return true;
+    }
 }

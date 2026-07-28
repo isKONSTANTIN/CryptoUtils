@@ -2432,6 +2432,9 @@
       "glob": "su/knst/crypto/fonts/RobotoMono.ttf"
     },
     {
+      "glob": "su/knst/crypto/fonts/Roboto.ttf"
+    },
+    {
       "glob": "su/knst/crypto/native-libs/*"
     },
     {

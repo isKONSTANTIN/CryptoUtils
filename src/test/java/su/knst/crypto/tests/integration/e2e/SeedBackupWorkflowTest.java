@@ -169,9 +169,19 @@ class SeedBackupWorkflowTest {
     }
 
     private static List<String> extractMnemonicWords(String message, int expectedCount) {
+        // The response has both an inline "Seed phrase" panel and a numbered-list panel, and
+        // whenever entropy is >= 32 bytes both panels carry a 12-word AND a 24-word section, so
+        // scanning for the first `expectedCount` numbered lines in the whole message would bleed
+        // words in from the wrong section/panel. The numbered-list panel is rendered last and is
+        // the only one with "N. word" formatted lines, so anchor on the *last* occurrence of this
+        // section's own header to land inside it, past any earlier same-named section.
+        String marker = expectedCount + "-word seed:";
+        int markerIndex = message.lastIndexOf(marker);
+        String scanFrom = markerIndex >= 0 ? message.substring(markerIndex + marker.length()) : message;
+
         List<String> words = new ArrayList<>();
 
-        for (String line : message.split("\n")) {
+        for (String line : scanFrom.split("\n")) {
             Matcher matcher = NUMBERED_WORD_LINE.matcher(line.trim());
 
             if (matcher.matches()) {

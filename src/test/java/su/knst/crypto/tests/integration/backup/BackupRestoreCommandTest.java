@@ -8,6 +8,7 @@ import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.backup.BackupCreateCommand;
 import su.knst.crypto.command.commands.backup.BackupRestoreCommand;
+import su.knst.crypto.tests.util.BackupTestFiles;
 import su.knst.crypto.utils.MnemonicUtils;
 import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
 
@@ -50,6 +51,8 @@ class BackupRestoreCommandTest {
         CommandResult result = createCommand.run(new ParamsContainer(args));
 
         assertFalse(result.error(), "backup setup failed: " + result.message());
+
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
     }
 
     // builds ["restore", type, (outputPath), chunk_1, chunk_2, ...] using only `chosen` indices

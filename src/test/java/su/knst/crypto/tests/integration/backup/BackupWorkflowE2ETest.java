@@ -8,6 +8,7 @@ import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.backup.BackupCreateCommand;
 import su.knst.crypto.command.commands.backup.BackupRestoreCommand;
+import su.knst.crypto.tests.util.BackupTestFiles;
 import su.knst.crypto.utils.MnemonicUtils;
 
 import java.io.IOException;
@@ -63,6 +64,7 @@ class BackupWorkflowE2ETest {
 
         CommandResult createResult = create.run(new ParamsContainer("file", name, String.valueOf(n), String.valueOf(k), source.toString()));
         assertFalse(createResult.error(), createResult.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
         Path output = Path.of("e2e_backup_file_restored");
         filesToCleanUp.add(output);
@@ -94,6 +96,7 @@ class BackupWorkflowE2ETest {
 
         CommandResult createResult = create.run(new ParamsContainer(createArgs));
         assertFalse(createResult.error(), createResult.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
         List<Integer> indices = new ArrayList<>(List.of(1, 2, 3, 4));
         Collections.shuffle(indices, random);
@@ -127,6 +130,7 @@ class BackupWorkflowE2ETest {
 
         CommandResult createResult = create.run(new ParamsContainer(createArgs));
         assertFalse(createResult.error(), createResult.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
         List<String> restoreArgs = new ArrayList<>(List.of("seed"));
         for (int i = 1; i <= n; i++)

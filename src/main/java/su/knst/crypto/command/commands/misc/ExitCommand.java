@@ -27,4 +27,9 @@ public class ExitCommand extends Command {
     public String args() {
         return null;
     }
+
+    @Override
+    public boolean supportsInlineArgs() {
+        return true;
+    }
 }

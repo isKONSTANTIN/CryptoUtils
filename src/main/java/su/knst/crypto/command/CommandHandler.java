@@ -26,7 +26,7 @@ public class CommandHandler {
                 return CommandResult.COMMAND_NOT_FOUND;
             }
 
-            return CommandResult.of("");
+            return CommandResult.VOID;
         }
 
         return command.run(new ParamsContainer(Arrays.copyOfRange(words, 1, words.length))).withTitle(words[0]);

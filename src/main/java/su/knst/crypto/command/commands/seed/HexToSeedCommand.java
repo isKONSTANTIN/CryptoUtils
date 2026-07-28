@@ -1,25 +1,36 @@
 package su.knst.crypto.command.commands.seed;
 
-import org.jline.builtins.Completers;
+import su.knst.crypto.Main;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.HexUtils;
-import su.knst.crypto.utils.args.ArgsTreeBuilder;
+import su.knst.crypto.utils.TerminalQuestion;
 
 import java.util.Optional;
 
 public class HexToSeedCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
+        if (args.size() == 0)
+            return runInteractive();
+
         Optional<String> oHex = args.stringV(0);
 
-        if (oHex.isEmpty())
-            return CommandResult.error("Hex entropy string required");
+        return run(oHex.orElseThrow());
+    }
 
-        String hex = oHex.get();
+    private CommandResult runInteractive() {
+        Optional<String> oHex = Main.getTerminalWorker().ask(new TerminalQuestion("Hex entropy string?", null));
 
+        if (oHex.isEmpty() || oHex.get().isBlank())
+            return CommandResult.error("No input");
+
+        return run(oHex.get().trim());
+    }
+
+    private CommandResult run(String hex) {
         if (!HexUtils.isValidHex(hex))
             return CommandResult.error("Failed to run: invalid hex string");
 
@@ -30,7 +41,7 @@ public class HexToSeedCommand extends Command {
 
     @Override
     public String description() {
-        return "Restore 12 and 24 word seed phrase from hex entropy";
+        return "Restore a 12/24-word seed phrase from raw hex entropy";
     }
 
     @Override
@@ -41,12 +52,5 @@ public class HexToSeedCommand extends Command {
     @Override
     public CommandTag tag() {
         return CommandTag.CRYPTOCURRENCIES;
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
-        return ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .addTip("<hex string>", "Seed bytes in hex")
-                .build();
     }
 }

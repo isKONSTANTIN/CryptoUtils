@@ -1,5 +1,6 @@
 package su.knst.crypto.command.commands.misc;
 
+import org.jline.builtins.Completers;
 import org.jline.utils.AttributedStyle;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
@@ -7,6 +8,7 @@ import su.knst.crypto.command.Panel;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.ConsoleBox;
+import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -123,5 +125,17 @@ public class HelpCommand extends Command {
     @Override
     public String args() {
         return "[command]";
+    }
+
+    @Override
+    public boolean supportsInlineArgs() {
+        return true;
+    }
+
+    @Override
+    public Completers.TreeCompleter.Node getArgsTree(String alias) {
+        return ArgsTreeBuilder.builder().addPossibleArg(alias)
+                .addPossibleArgs(handler.getCommandsNames())
+                .build();
     }
 }

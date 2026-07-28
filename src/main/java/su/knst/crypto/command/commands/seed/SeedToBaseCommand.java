@@ -1,20 +1,17 @@
 package su.knst.crypto.command.commands.seed;
 
-import org.jline.builtins.Completers;
-import org.jline.reader.Candidate;
-import org.jline.reader.Completer;
+import su.knst.crypto.Main;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
-import su.knst.crypto.utils.args.ArgsTreeBuilder;
+import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.exceptions.WrongMnemonicException;
-import su.knst.crypto.utils.worldlists.WordLists;
 
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.Base64;
+import java.util.Optional;
 
 import static su.knst.crypto.command.commands.seed.SeedGeneratorCommand.formatBits;
 import static su.knst.crypto.utils.MnemonicUtils.*;
@@ -22,12 +19,28 @@ import static su.knst.crypto.utils.MnemonicUtils.*;
 public class SeedToBaseCommand extends Command {
     @Override
     public CommandResult run(ParamsContainer args) {
+        if (args.size() == 0)
+            return runInteractive();
+
         String[] mnemonic = new String[args.size()];
 
         for (int i = 0; i < mnemonic.length; i++) {
             mnemonic[i] = args.stringV(i).orElseThrow();
         }
 
+        return run(mnemonic);
+    }
+
+    private CommandResult runInteractive() {
+        Optional<String[]> oWords = Prompts.askWords(Main.getTerminalWorker(), "Seed words separated by spaces?");
+
+        if (oWords.isEmpty())
+            return CommandResult.error("No input");
+
+        return run(oWords.get());
+    }
+
+    private CommandResult run(String[] mnemonic) {
         try {
             checkMnemonic(mnemonic);
         } catch (WrongMnemonicException | NoSuchAlgorithmException e) {
@@ -48,7 +61,7 @@ public class SeedToBaseCommand extends Command {
 
     @Override
     public String description() {
-        return "Transform seed words to base64 entropy without checksum";
+        return "Transform a seed phrase into its raw base64 entropy (without the checksum word)";
     }
 
     @Override
@@ -59,24 +72,5 @@ public class SeedToBaseCommand extends Command {
     @Override
     public CommandTag tag() {
         return CommandTag.CRYPTOCURRENCIES;
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
-        ArgsTreeBuilder builder = ArgsTreeBuilder.builder().addPossibleArg(alias)
-                .recursiveSubTree();
-
-        Completer completer = (reader, line, candidates) ->
-                candidates.addAll(
-                        Arrays.stream(WordLists.getActiveList().array())
-                                .filter(s -> s.contains(line.word()))
-                                .map(Candidate::new)
-                                .toList()
-                );
-
-        for(int i = 0; i < 24; i++)
-            builder.addCompleter(completer);
-
-        return builder.parent().build();
     }
 }
