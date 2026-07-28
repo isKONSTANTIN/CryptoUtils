@@ -3,7 +3,7 @@ package su.knst.crypto.command.commands.seed;
 import org.jline.builtins.Completers;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
-import su.knst.crypto.command.CommandResultBuilder;
+import su.knst.crypto.command.Panel;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.HexUtils;
@@ -12,8 +12,10 @@ import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.List;
 import java.util.Optional;
 
 public class SeedGeneratorCommand extends Command {
@@ -39,54 +41,71 @@ public class SeedGeneratorCommand extends Command {
     }
 
     public CommandResult run(byte[] entropy) {
-        CommandResultBuilder resultBuilder = CommandResultBuilder.builder();
-
-        resultBuilder
-                .line("Source entropy:").line()
-                .line(formatBits(entropy, 4))
-                .line("Base64 encoded: " + Base64.getEncoder().encodeToString(entropy))
-                .line("Hex encoded: " + HexUtils.bytesToHex(entropy));
-
-        if (entropy.length >= 32) {
-            try {
-                resultBuilder
-                        .line()
-                        .line("24-word seed:")
-                        .line(formatMnemonic(
-                                MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 32))
-                        ));
-            }catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }
-        }
-
-        if (entropy.length >= 16) {
-            try {
-                resultBuilder
-                        .line()
-                        .line("12-word seed:")
-                        .line(formatMnemonic(
-                                MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 16))
-                        ));
-            }catch (NoSuchAlgorithmException e) {
-                e.printStackTrace();
-            }
-        }
-
         if (entropy.length < 16) {
-            resultBuilder.error()
-                    .line()
-                    .line("Not enough source entropy!")
-                    .line("Given: " + entropy.length + " bytes")
-                    .line("Min: 16 bytes");
+            return CommandResult.error(
+                    "Not enough source entropy!\n"
+                            + "Given: " + entropy.length + " bytes\n"
+                            + "Min: 16 bytes"
+            );
         }
 
-        return resultBuilder.build();
+        String[] mnemonic24 = null;
+        String[] mnemonic12 = null;
+
+        try {
+            if (entropy.length >= 32)
+                mnemonic24 = MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 32));
+
+            mnemonic12 = MnemonicUtils.createMnemonic(Arrays.copyOfRange(entropy, 0, 16));
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+
+        List<Panel> panels = new ArrayList<>();
+
+        panels.add(Panel.framed("Source entropy",
+                formatBits(entropy, 4) + "\n"
+                        + "Base64 encoded: " + Base64.getEncoder().encodeToString(entropy) + "\n"
+                        + "Hex encoded: " + HexUtils.bytesToHex(entropy),
+                null));
+
+        String inline = joinSeedSections(mnemonic24, mnemonic12, SeedGeneratorCommand::formatMnemonicLine);
+        if (!inline.isEmpty())
+            panels.add(Panel.framed("Seed phrase", inline, null));
+
+        String vertical = joinSeedSections(mnemonic24, mnemonic12, SeedGeneratorCommand::formatMnemonicList);
+        if (!vertical.isEmpty())
+            panels.add(Panel.plain(vertical));
+
+        return CommandResult.panels(panels);
+    }
+
+    private interface MnemonicFormatter {
+        String format(String[] words);
+    }
+
+    private static String joinSeedSections(String[] mnemonic24, String[] mnemonic12, MnemonicFormatter formatter) {
+        StringBuilder result = new StringBuilder();
+
+        if (mnemonic12 != null) {
+            if (!result.isEmpty())
+                result.append("\n\n");
+
+            result.append("12-word seed:\n").append(formatter.format(mnemonic12));
+        }
+
+        if (mnemonic24 != null)
+            result.append("24-word seed:\n").append(formatter.format(mnemonic24));
+
+        return result.toString();
     }
 
     public static String formatMnemonic(String[] words) {
+        return formatMnemonicList(words) + "\n" + formatMnemonicLine(words);
+    }
+
+    public static String formatMnemonicList(String[] words) {
         StringBuilder list = new StringBuilder();
-        StringBuilder line = new StringBuilder();
 
         for (int i = 0; i < words.length; i++) {
             list
@@ -95,11 +114,13 @@ public class SeedGeneratorCommand extends Command {
                     .append(i + 1 < 10 ? " " : "")
                     .append(words[i])
                     .append("\n");
-
-            line.append(words[i]).append(" ");
         }
 
-        return list.append("\n").append(line).toString();
+        return list.toString();
+    }
+
+    public static String formatMnemonicLine(String[] words) {
+        return String.join(" ", words);
     }
 
     public static String formatBits(byte[] bytes, int bytesInLine) {
