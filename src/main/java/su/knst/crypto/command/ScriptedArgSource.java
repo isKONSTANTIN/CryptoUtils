@@ -34,6 +34,11 @@ public class ScriptedArgSource implements ArgSource {
     }
 
     @Override
+    public Optional<String> stringWithFileCompletion(String prompt) {
+        return next();
+    }
+
+    @Override
     public Optional<Integer> integer(String prompt) {
         return next().flatMap(v -> {
             try {

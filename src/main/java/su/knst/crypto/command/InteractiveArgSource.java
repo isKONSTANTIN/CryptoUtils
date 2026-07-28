@@ -23,6 +23,11 @@ public class InteractiveArgSource implements ArgSource {
     }
 
     @Override
+    public Optional<String> stringWithFileCompletion(String prompt) {
+        return Prompts.askStringWithFileCompletion(tw, prompt);
+    }
+
+    @Override
     public Optional<Integer> integer(String prompt) {
         return Prompts.askInt(tw, prompt);
     }

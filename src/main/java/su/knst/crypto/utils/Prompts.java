@@ -59,6 +59,15 @@ public final class Prompts {
         return s + " ".repeat(Math.max(0, width - s.length()));
     }
 
+    // Free-text answer with file-path autocompletion, for inputs that accept either a file path
+    // or some other raw token (e.g. a hex string) - unlike askExistingFilePath, the answer is not
+    // required to resolve to an existing file.
+    public static Optional<String> askStringWithFileCompletion(TerminalWorker tw, String question) {
+        Completer completer = new Completers.FilesCompleter(Main::getCurrentPath);
+
+        return tw.ask(new TerminalQuestion(question, null, completer)).filter(v -> !v.isBlank());
+    }
+
     // Loops until an existing file is given, or the user cancels with an empty answer.
     public static Optional<Path> askExistingFilePath(TerminalWorker tw, String question) {
         Completer completer = new Completers.FilesCompleter(Main::getCurrentPath);

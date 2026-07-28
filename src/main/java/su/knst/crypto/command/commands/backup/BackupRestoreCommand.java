@@ -75,7 +75,7 @@ public class BackupRestoreCommand extends Command {
                 return CommandResult.error("No input");
 
             for (int i = 1; i <= oTotal.get(); i++) {
-                Optional<String> oToken = in.string("Chunk #" + i + ": file path, hex string, or empty to skip:");
+                Optional<String> oToken = in.stringWithFileCompletion("Chunk #" + i + ": file path, hex string, or empty to skip:");
 
                 if (oToken.isEmpty())
                     continue;

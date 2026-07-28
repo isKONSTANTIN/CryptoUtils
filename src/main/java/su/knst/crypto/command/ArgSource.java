@@ -14,6 +14,10 @@ import java.util.Optional;
 public interface ArgSource {
     Optional<String> string(String prompt);
 
+    // Like string(), but interactive mode offers file-path autocompletion (Tab) for inputs that
+    // may accept a file path among other raw token forms.
+    Optional<String> stringWithFileCompletion(String prompt);
+
     Optional<Integer> integer(String prompt);
 
     Optional<String> choice(String prompt, List<Prompts.Choice> choices);
