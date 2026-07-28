@@ -58,6 +58,18 @@ Alternatively, without Docker, install a [GraalVM](https://www.graalvm.org/downl
 
 The binary is written to `build/native/nativeCompile/`.
 
+### .deb / .rpm Packages
+
+CI also builds `.deb` and `.rpm` packages (installing the native binary to `/usr/bin/cryptoutils`) for x86_64 and arm64 — download them from the "CryptoUtils-deb-\*" / "CryptoUtils-rpm-\*" artifacts on the [latest GitHub Actions run](https://github.com/isKONSTANTIN/CryptoUtils/actions/workflows/gradle.yml).
+
+To build them yourself via Docker:
+
+<pre>docker buildx build -f docker/native-build.Dockerfile --target package-export \
+    --build-arg VERSION=1.0.0 --build-arg PKG_ARCH=amd64 \
+    --output type=local,dest=out .</pre>
+
+`PKG_ARCH` is the Debian architecture name (`amd64` or `arm64`) — the `.rpm`'s architecture (`x86_64`/`aarch64`) is derived from it automatically. The packages are written to `out/`.
+
 ## Wiki
 
 Instructions for building, a list of all commands and the use of some can be found in the [Wiki](https://github.com/isKONSTANTIN/CryptoUtils/wiki/Using)

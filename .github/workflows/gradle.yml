@@ -52,8 +52,10 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact-suffix: linux-x86_64
+            pkg-arch: amd64
           - os: ubuntu-24.04-arm
             artifact-suffix: linux-arm64
+            pkg-arch: arm64
 
     runs-on: ${{ matrix.os }}
 
@@ -74,3 +76,30 @@ jobs:
         with:
           name: CryptoUtils-native-${{ matrix.artifact-suffix }}
           path: out/cryptoutils
+
+      - name: Read project version
+        id: version
+        run: echo "version=$(grep -oP "(?<=^version ')[^']+" build.gradle)" >> "$GITHUB_OUTPUT"
+
+      - name: Build .deb/.rpm packages
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/native-build.Dockerfile
+          target: package-export
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            PKG_ARCH=${{ matrix.pkg-arch }}
+          outputs: type=local,dest=out-pkg
+
+      - name: Upload .deb package
+        uses: actions/upload-artifact@v4
+        with:
+          name: CryptoUtils-deb-${{ matrix.artifact-suffix }}
+          path: out-pkg/*.deb
+
+      - name: Upload .rpm package
+        uses: actions/upload-artifact@v4
+        with:
+          name: CryptoUtils-rpm-${{ matrix.artifact-suffix }}
+          path: out-pkg/*.rpm
