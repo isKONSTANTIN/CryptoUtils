@@ -3,6 +3,8 @@ package su.knst.crypto;
 import su.knst.crypto.command.CommandHandler;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.command.commands.backup.BackupCreateCommand;
+import su.knst.crypto.command.commands.backup.BackupRestoreCommand;
 import su.knst.crypto.command.commands.misc.ChangeDirectoryCommand;
 import su.knst.crypto.command.commands.misc.DeleteCommand;
 import su.knst.crypto.command.commands.misc.ExitCommand;
@@ -26,6 +28,12 @@ public class Main {
     protected static TerminalWorker terminalWorker;
     protected static Path currentPath = Path.of("./").toAbsolutePath();
 
+    public static String getVersion() {
+        String version = Main.class.getPackage().getImplementationVersion();
+
+        return version != null ? version : "dev";
+    }
+
     public Main() {
         WordLists.preload();
 
@@ -34,14 +42,18 @@ public class Main {
         handler.addTagManually(CommandTag.CRYPTOGRAPHY);
         handler.addTagManually(CommandTag.BACKUPS);
 
+        ExitCommand exitCommand = new ExitCommand();
+
         handler.registerCommand("help", new HelpCommand());
-        handler.registerCommand("exit", new ExitCommand());
+        handler.registerCommand("exit", exitCommand);
         handler.registerCommand("cd", new ChangeDirectoryCommand());
         handler.registerCommand("delete", new DeleteCommand());
-        handler.registerCommand("q", new ExitCommand());
+        handler.registerCommand("q", exitCommand);
 
         handler.registerCommand("seed", new SeedGeneratorCommand());
         handler.registerCommand("seed_to_base", new SeedToBaseCommand());
+        handler.registerCommand("seed_to_hex", new SeedToHexCommand());
+        handler.registerCommand("hex_to_seed", new HexToSeedCommand());
         handler.registerCommand("extend_seed", new SeedExtenderCommand());
         handler.registerCommand("wordlist", new WordListCommand());
 
@@ -55,6 +67,9 @@ public class Main {
         handler.registerCommand("ecl", new ErrorCorrectionLevelsCommand());
         handler.registerCommand("shamir", new ShamirCommand());
         handler.registerCommand("hex", new HexCommand());
+
+        handler.registerCommand("backup", new BackupCreateCommand());
+        handler.registerCommand("restore", new BackupRestoreCommand());
 
         terminalWorker = new TerminalWorker(handler);
     }

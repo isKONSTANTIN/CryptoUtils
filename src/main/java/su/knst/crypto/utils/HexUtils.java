@@ -16,6 +16,10 @@ public class HexUtils {
         return new String(hexChars);
     }
 
+    public static boolean isValidHex(String s) {
+        return s.length() % 2 == 0 && s.matches("(?i)[0-9a-f]*");
+    }
+
     public static byte[] hexStringToByteArray(String s) {
         int len = s.length();
         byte[] data = new byte[len / 2];

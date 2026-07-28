@@ -23,8 +23,6 @@ public class CommandHandler {
             try {
                 runSystemCommand(words);
             } catch (IOException e) {
-                e.printStackTrace();
-
                 return CommandResult.COMMAND_NOT_FOUND;
             }
 

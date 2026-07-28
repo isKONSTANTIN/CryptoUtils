@@ -6,6 +6,7 @@ import su.knst.crypto.Main;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.seed.SeedGeneratorCommand;
+import su.knst.crypto.utils.HexUtils;
 
 import java.security.SecureRandom;
 import java.util.Base64;
@@ -35,6 +36,7 @@ class SeedGeneratorTest {
 
         assertFalse(result.error());
         assertTrue(result.message().contains(base64));
+        assertTrue(result.message().contains(HexUtils.bytesToHex(entropy)));
         assertTrue(result.message().contains("24-word seed"));
         assertTrue(result.message().contains("12-word seed"));
     }

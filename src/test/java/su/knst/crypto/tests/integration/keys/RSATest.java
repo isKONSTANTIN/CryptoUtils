@@ -7,6 +7,7 @@ import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.keys.RSAKeyGeneratorCommand;
 import su.knst.crypto.command.commands.seed.SeedGeneratorCommand;
 import su.knst.crypto.command.commands.seed.SeedRSACipherCommand;
+import su.knst.crypto.tests.util.QuietStderr;
 import su.knst.crypto.utils.SimpleRSA;
 
 import javax.crypto.Cipher;
@@ -124,11 +125,11 @@ class RSATest {
         assertFalse(resultOld.error());
         assertEquals(decryptedSeedResult, resultOld.message());
 
-        CommandResult resultNew = cipherCommand.run(
+        CommandResult resultNew = QuietStderr.run(() -> cipherCommand.run(
                 "decrypt",
                 SimpleRSA.keyToBytes(keyPair.getPrivate()),
                 legacyEncrypted
-        );
+        ));
 
         assertTrue(resultNew.error());
     }

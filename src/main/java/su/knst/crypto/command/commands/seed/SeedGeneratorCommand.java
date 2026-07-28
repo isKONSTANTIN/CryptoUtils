@@ -6,6 +6,7 @@ import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
+import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
 
@@ -43,7 +44,8 @@ public class SeedGeneratorCommand extends Command {
         resultBuilder
                 .line("Source entropy:").line()
                 .line(formatBits(entropy, 4))
-                .line("Base64 encoded: " + Base64.getEncoder().encodeToString(entropy));
+                .line("Base64 encoded: " + Base64.getEncoder().encodeToString(entropy))
+                .line("Hex encoded: " + HexUtils.bytesToHex(entropy));
 
         if (entropy.length >= 32) {
             try {

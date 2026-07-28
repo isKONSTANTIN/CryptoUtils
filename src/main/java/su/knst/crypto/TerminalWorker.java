@@ -1,12 +1,15 @@
 package su.knst.crypto;
 
 import org.jline.builtins.Completers.TreeCompleter;
+import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
+import org.jline.reader.UserInterruptException;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import su.knst.crypto.command.CommandHandler;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.utils.Banner;
 import su.knst.crypto.utils.TerminalQuestion;
 
 import java.io.IOException;
@@ -70,7 +73,7 @@ public class TerminalWorker {
                 break;
             }
 
-            if (answers != null && answers.contains(answer))
+            if (answers == null || answers.contains(answer))
                 break;
         }
 
@@ -89,6 +92,7 @@ public class TerminalWorker {
 
         writer = terminal.writer();
 
+        writer.println(Banner.render(terminal));
         writer.println(handler.run("help").message());
 
         while (run) {
@@ -96,6 +100,9 @@ public class TerminalWorker {
 
             try {
                 line = reader.readLine("cu> ");
+            } catch (UserInterruptException | EndOfFileException e) {
+                run = false;
+                break;
             } catch (Exception e) {
                 e.printStackTrace();
                 run = false;
