@@ -85,7 +85,7 @@ Two commands implement this:
 
 ### Native Binary
 
-CI builds a native executable (via [GraalVM native-image](https://www.graalvm.org/latest/reference-manual/native-image/)) for Linux, x86_64 and arm64 — no JVM installation required to run it. Download it from the "CryptoUtils-native-\*" artifacts on the [latest GitHub Actions run](https://github.com/isKONSTANTIN/CryptoUtils/actions/workflows/gradle.yml). On Windows, use the jar instead (`java -jar CryptoUtils-*.jar`, requires JVM 17+).
+CI builds a native executable (via [GraalVM native-image](https://www.graalvm.org/latest/reference-manual/native-image/)) for Linux, x86_64 and arm64 — no JVM installation required to run it. Grab `cryptoutils-x86_64` / `cryptoutils-aarch64` from the [latest release](https://github.com/isKONSTANTIN/CryptoUtils/releases/latest). On Windows, use the jar instead (`java -jar CryptoUtils-*.jar`, requires JVM 17+).
 
 To build it yourself, the easiest way is via Docker, which reproduces the same build CI uses:
 
@@ -105,7 +105,7 @@ The binary is written to `build/native/nativeCompile/cryptoutils`.
 
 ### .deb / .rpm Packages
 
-CI also builds `.deb` and `.rpm` packages (installing the native binary to `/usr/bin/cryptoutils`) for x86_64 and arm64 — download them from the "CryptoUtils-deb-\*" / "CryptoUtils-rpm-\*" artifacts on the [latest GitHub Actions run](https://github.com/isKONSTANTIN/CryptoUtils/actions/workflows/gradle.yml).
+CI also builds `.deb` and `.rpm` packages (installing the native binary to `/usr/bin/cryptoutils`) for x86_64 and arm64 — grab them from the [latest release](https://github.com/isKONSTANTIN/CryptoUtils/releases/latest) as well.
 
 To build them yourself via Docker:
 
