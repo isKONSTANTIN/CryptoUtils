@@ -46,11 +46,15 @@ public final class SharePrintLayoutPlanner {
         // exactly that dense, but ShareCardImage/TagImage supersample their canvases (RENDER_SCALE
         // 2x/6x) for crisper text/lines, so their actual raw pixel density is well above the
         // nominal "300 DPI" written into the PNG metadata. Anchoring the page size to a share
-        // card's own already-rendered pixel width instead - which is always exactly 42mm (1/5 of
-        // A4's 210mm width) by design, see ShareCardImage - keeps card pixels and page pixels in
-        // the same scale regardless of supersampling, without needing to know any DPI at all.
+        // card's own already-rendered pixel width instead keeps card pixels and page pixels in the
+        // same scale regardless of supersampling, without needing to know any DPI at all.
+        //
+        // The card's true design width is 42mm (see ShareCardImage), but it's deliberately treated
+        // here as if it were 56mm: that shrinks the computed page pixel dimensions relative to the
+        // card's fixed pixel width, so fewer cards fit per sheet and each one prints physically
+        // larger.
         public static PageConfig a4FittingCardWidth(int cardWidthPx) {
-            double pxPerMm = cardWidthPx / 42.0;
+            double pxPerMm = cardWidthPx / 56.0;
 
             return new PageConfig(
                     (int) Math.round(210 * pxPerMm),

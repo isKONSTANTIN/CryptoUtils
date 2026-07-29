@@ -5,7 +5,7 @@ plugins {
 }
 
 group 'su.knrg.crypto'
-version '1.1.0'
+version '1.2.0'
 mainClassName = 'su.knst.crypto.Main'
 
 sourceSets {
@@ -72,12 +72,37 @@ graalvmNative {
             mainClass.set(mainClassName)
             imageName.set('cryptoutils')
             buildArgs.add('--enable-all-security-services')
+            buildArgs.add('-R:MaxHeapSize=1g')
             javaLauncher.set(graalvmLauncher)
             classpath(files(generatedNativeLibsDir).builtBy('copyNativeAwtLibs'))
         }
     }
     metadataRepository {
         enabled = true
+    }
+}
+
+// native-image copies the AWT shared libs it links against next to the output
+// binary, but those are redundant: the same libs are already embedded as
+// classpath resources (see copyNativeAwtLibs) and self-extracted at runtime
+// by NativeAwtLibraries, so the loose copies are dropped here. The plugin also
+// has no built-in UPX support, so that runs as the same finalizer step.
+tasks.named('nativeCompile') {
+    finalizedBy 'finalizeNativeExecutable'
+}
+
+tasks.register('finalizeNativeExecutable') {
+    dependsOn 'nativeCompile'
+    doLast {
+        def outDir = layout.buildDirectory.dir('native/nativeCompile').get().asFile
+        def executable = new File(outDir, 'cryptoutils')
+        outDir.listFiles().findAll {
+            it != executable && (it.name.endsWith('.so') || it.name.endsWith('.dylib'))
+        }.each { it.delete() }
+
+        exec {
+            commandLine 'upx', '-1', executable.absolutePath
+        }
     }
 }
 

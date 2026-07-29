@@ -17,13 +17,12 @@ import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
 import su.knst.crypto.utils.Prompts;
 import su.knst.crypto.utils.codes.ShareCardImage;
+import su.knst.crypto.utils.codes.ShareCardRenderer;
 import su.knst.crypto.utils.codes.SharePrintLayoutPlanner;
 import su.knst.crypto.utils.codes.SharePrintPageRenderer;
-import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
 import su.knst.crypto.utils.codes.TagImage;
 import su.knst.crypto.utils.exceptions.WrongMnemonicException;
 
-import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -42,11 +41,6 @@ public class BackupCreateCommand extends Command {
             new Prompts.Choice("text", "Text", "Type the secret in directly"),
             new Prompts.Choice("seed", "Seed", "Split a BIP-39 mnemonic phrase")
     );
-    // Tried in order, most error-correction first; if a share is too large to fit a QR code at
-    // one level, we drop down a notch rather than giving up on the QR entirely.
-    private static final ErrorCorrectionLevel[] ERROR_CORRECTION_LEVELS = {
-            ErrorCorrectionLevel.H, ErrorCorrectionLevel.Q, ErrorCorrectionLevel.M, ErrorCorrectionLevel.L
-    };
     private static final int MAX_SPLIT_ATTEMPTS = 10;
     private static final int PNG_DPI = 300;
 
@@ -190,7 +184,7 @@ public class BackupCreateCommand extends Command {
             ErrorCorrectionLevel fittingLevel = null;
             boolean decodeFailed = false;
 
-            for (ErrorCorrectionLevel level : ERROR_CORRECTION_LEVELS) {
+            for (ErrorCorrectionLevel level : ShareCardRenderer.ERROR_CORRECTION_LEVELS) {
                 candidate = new LinkedHashMap<>();
                 boolean levelFits = true;
 
@@ -209,7 +203,7 @@ public class BackupCreateCommand extends Command {
                     // a share that renders but doesn't decode back to its own hex isn't safe to
                     // hand out: this is the flaky case the outer attempt loop exists for, so a
                     // fresh split (not just a lower error-correction level) is the real fix
-                    if (!decodesTo(image, hexByPart.get(i))) {
+                    if (!ShareCardRenderer.decodesTo(image, hexByPart.get(i))) {
                         levelFits = false;
                         decodeFailed = true;
                         break;
@@ -233,7 +227,7 @@ public class BackupCreateCommand extends Command {
                 // no error-correction level was low enough: fall back to QR-less cards (the hex
                 // block is still the authoritative fallback path) rather than failing the backup
                 candidate = new LinkedHashMap<>();
-                ErrorCorrectionLevel lowestLevel = ERROR_CORRECTION_LEVELS[ERROR_CORRECTION_LEVELS.length - 1];
+                ErrorCorrectionLevel lowestLevel = ShareCardRenderer.ERROR_CORRECTION_LEVELS[ShareCardRenderer.ERROR_CORRECTION_LEVELS.length - 1];
 
                 for (int i = 1; i <= allParts; i++) {
                     try {
@@ -345,7 +339,7 @@ public class BackupCreateCommand extends Command {
         builder.line("Backup created: " + allParts + " parts, " + forRecover + " required to recover")
                 .line("Type: " + typeLabel)
                 .line(appliedHasQr
-                        ? "QR error correction level: " + describeLevel(appliedLevel)
+                        ? "QR error correction level: " + ShareCardRenderer.describeLevel(appliedLevel)
                         : "QR code: none (share too large at every error correction level, hex block only)");
 
         for (Path path : written)
@@ -369,35 +363,6 @@ public class BackupCreateCommand extends Command {
             builder.line("Warning: failed to generate print sheets: " + printFailure);
 
         return builder.build();
-    }
-
-    private static String describeLevel(ErrorCorrectionLevel level) {
-        String name = switch (level) {
-            case L -> "Low";
-            case M -> "Medium";
-            case Q -> "Quartile";
-            case H -> "High";
-        };
-
-        int position = Arrays.asList(ERROR_CORRECTION_LEVELS).indexOf(level) + 1;
-
-        return name + " (" + position + "/" + ERROR_CORRECTION_LEVELS.length + ")";
-    }
-
-    private static boolean decodesTo(BufferedImage image, String expectedHex) {
-        try {
-            Path temp = Files.createTempFile("backup_qr_verify", ".png");
-
-            try {
-                ImageIO.write(image, "png", temp.toFile());
-
-                return expectedHex.equals(new SimpleQRCodeWorker().readCode(temp.toString()));
-            } finally {
-                Files.deleteIfExists(temp);
-            }
-        } catch (IOException e) {
-            return false;
-        }
     }
 
     private static String validateScheme(int allParts, int forRecover) {

@@ -1,4 +1,26 @@
 {
+  "jni": [
+    {
+      "type": "com.sun.imageio.plugins.jpeg.JPEGImageReader",
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "type": "com.sun.imageio.plugins.jpeg.JPEGImageWriter",
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "type": "javax.imageio.plugins.jpeg.JPEGQTable",
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    },
+    {
+      "type": "javax.imageio.plugins.jpeg.JPEGHuffmanTable",
+      "allDeclaredMethods": true,
+      "allDeclaredFields": true
+    }
+  ],
   "reflection": [
     {
       "type": "com.github.jaiimageio.impl.common.PackageUtil"

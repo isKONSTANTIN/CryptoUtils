@@ -67,13 +67,15 @@ public final class ShareCardImage {
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
     private static final int HEX_GROUP_SIZE = 6;
-    private static final int HEX_GROUPS_PER_LINE = 10;
-    private static final float HEX_FONT_SIZE_DEFAULT = 10f;
-    private static final float HEX_FONT_SIZE_MIN = 7f;
+    private static final int HEX_GROUPS_PER_LINE = 8;
+    private static final float HEX_FONT_SIZE_DEFAULT = 12f;
+    private static final float HEX_FONT_SIZE_MIN = 9f;
     private static final float HEX_LETTER_SPACING_DEFAULT = 0.3f;
     private static final float HEX_LINE_HEIGHT_FACTOR = 1.75f;
     private static final int HEX_BLOCK_PADDING_V = 10;
     private static final int HEX_BLOCK_PADDING_H = 12;
+    private static final float HEX_BOLD_STROKE = 0.6f;
+    private static final float LABEL_BOLD_STROKE = 0.5f;
 
     private static final int CHECKSUM_BARCODE_WIDTH = 220;
     private static final int CHECKSUM_BARCODE_HEIGHT = 36;
@@ -317,7 +319,7 @@ public final class ShareCardImage {
         int columnX = PADDING_SIDE + columnIndex * columnWidth;
 
         float labelSize = 10f;
-        drawCenteredText(g, SANS, label, y, columnWidth, labelSize, 0, TEXT_SECONDARY_888, columnX);
+        drawCenteredTextBold(g, SANS, label, y, columnWidth, labelSize, 0, TEXT_SECONDARY_888, LABEL_BOLD_STROKE, columnX);
 
         float valueY = y + lineHeight(SANS, labelSize) + valueGapFromLabel;
         drawCenteredText(g, SANS, value, valueY, columnWidth, valueSize, 0, TEXT_PRIMARY, columnX);
@@ -385,7 +387,7 @@ public final class ShareCardImage {
         float hexLineHeight = hexLayout.fontSize() * HEX_LINE_HEIGHT_FACTOR;
 
         for (String line : hexLayout.lines()) {
-            drawCenteredText(g, MONO, line, innerY, contentWidth, hexLayout.fontSize(), hexLayout.letterSpacing(), TEXT_PRIMARY, PADDING_SIDE);
+            drawCenteredTextBold(g, MONO, line, innerY, contentWidth, hexLayout.fontSize(), hexLayout.letterSpacing(), Color.BLACK, HEX_BOLD_STROKE, PADDING_SIDE);
             innerY += hexLineHeight;
         }
 
@@ -406,12 +408,12 @@ public final class ShareCardImage {
         float fontSize = 9f;
         String left = "SHA-256 checksum: " + data.checksumHex();
 
-        drawText(g, SANS, left, PADDING_SIDE, y + ascent(SANS, fontSize), fontSize, 0, TEXT_SECONDARY_999);
+        drawTextBold(g, SANS, left, PADDING_SIDE, y + ascent(SANS, fontSize), fontSize, 0, TEXT_SECONDARY_999, LABEL_BOLD_STROKE);
 
         if (data.typeLabel() != null && !data.typeLabel().isEmpty()) {
             float rightWidth = stringWidth(SANS, data.typeLabel(), fontSize, 0);
             float rightX = PADDING_SIDE + contentWidth - rightWidth;
-            drawText(g, SANS, data.typeLabel(), rightX, y + ascent(SANS, fontSize), fontSize, 0, TEXT_SECONDARY_999);
+            drawTextBold(g, SANS, data.typeLabel(), rightX, y + ascent(SANS, fontSize), fontSize, 0, TEXT_SECONDARY_999, LABEL_BOLD_STROKE);
         }
 
         return y + lineHeight(SANS, fontSize);
@@ -432,7 +434,7 @@ public final class ShareCardImage {
 
         String label = "NOTES";
         float labelSize = 9f;
-        drawText(g, SANS, label, PADDING_SIDE, innerY + ascent(SANS, labelSize), labelSize, spacingFromEm(labelSize, 0.03f), TEXT_SECONDARY_999);
+        drawTextBold(g, SANS, label, PADDING_SIDE, innerY + ascent(SANS, labelSize), labelSize, spacingFromEm(labelSize, 0.03f), TEXT_SECONDARY_999, LABEL_BOLD_STROKE);
         innerY += lineHeight(SANS, labelSize) + 6;
 
         float lineFieldHeight = 16f;
@@ -453,11 +455,11 @@ public final class ShareCardImage {
     private static void drawFooterRow(Graphics2D g, float y, int contentWidth) {
         float fontSize = 9f;
 
-        drawText(g, SANS, "keep this share confidential", PADDING_SIDE, y + ascent(SANS, fontSize), fontSize, 0, TEXT_SECONDARY_999);
+        drawTextBold(g, SANS, "keep this share confidential", PADDING_SIDE, y + ascent(SANS, fontSize), fontSize, 0, TEXT_SECONDARY_999, LABEL_BOLD_STROKE);
 
         float rightWidth = stringWidth(SANS, REPO_LINK, fontSize, 0);
         float rightX = PADDING_SIDE + contentWidth - rightWidth;
-        drawText(g, SANS, REPO_LINK, rightX, y + ascent(SANS, fontSize), fontSize, 0, TEXT_SECONDARY_999);
+        drawTextBold(g, SANS, REPO_LINK, rightX, y + ascent(SANS, fontSize), fontSize, 0, TEXT_SECONDARY_999, LABEL_BOLD_STROKE);
     }
 
     private static float footerRowHeight() {
@@ -503,6 +505,17 @@ public final class ShareCardImage {
     private static void drawCenteredText(Graphics2D g, TrueTypeFont font, String text, float y, int containerWidth,
                                           float pixelSize, float letterSpacing, Color color, int containerX) {
         GlyphText.drawCenteredText(g, font, text, y, containerWidth, pixelSize, letterSpacing, color, containerX);
+    }
+
+    private static void drawCenteredTextBold(Graphics2D g, TrueTypeFont font, String text, float y, int containerWidth,
+                                              float pixelSize, float letterSpacing, Color color, float boldStrokeWidth,
+                                              int containerX) {
+        GlyphText.drawCenteredTextBold(g, font, text, y, containerWidth, pixelSize, letterSpacing, color, boldStrokeWidth, containerX);
+    }
+
+    private static void drawTextBold(Graphics2D g, TrueTypeFont font, String text, float x, float baselineY,
+                                      float pixelSize, float letterSpacing, Color color, float boldStrokeWidth) {
+        GlyphText.drawTextBold(g, font, text, x, baselineY, pixelSize, letterSpacing, color, boldStrokeWidth);
     }
 
     private static float ascent(TrueTypeFont font, float pixelSize) {

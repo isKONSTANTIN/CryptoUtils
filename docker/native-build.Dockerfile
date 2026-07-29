@@ -25,7 +25,7 @@ FROM eclipse-temurin:17-jdk AS build
 
 COPY --from=graalvm /opt/graalvm-community-java25 /opt/graalvm-community-java25
 
-RUN apt-get update && apt-get install -y --no-install-recommends zlib1g-dev build-essential \
+RUN apt-get update && apt-get install -y --no-install-recommends zlib1g-dev build-essential upx-ucl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /workspace

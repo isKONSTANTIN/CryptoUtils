@@ -5,6 +5,8 @@ import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.command.commands.backup.BackupCreateCommand;
 import su.knst.crypto.command.commands.backup.BackupRestoreCommand;
+import su.knst.crypto.command.commands.backup.CardCommand;
+import su.knst.crypto.command.commands.backup.LabelCommand;
 import su.knst.crypto.command.commands.misc.ChangeDirectoryCommand;
 import su.knst.crypto.command.commands.misc.DeleteCommand;
 import su.knst.crypto.command.commands.misc.ExitCommand;
@@ -69,6 +71,8 @@ public class Main {
 
         handler.registerCommand("backup", new BackupCreateCommand());
         handler.registerCommand("restore", new BackupRestoreCommand());
+        handler.registerCommand("card", new CardCommand());
+        handler.registerCommand("label", new LabelCommand());
 
         terminalWorker = new TerminalWorker(handler);
     }
