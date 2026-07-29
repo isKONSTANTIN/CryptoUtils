@@ -1,0 +1,13 @@
+# Gradle
+.gradle/
+build/
+
+# Docker build output (docker/native-build.Dockerfile --output type=local,dest=out)
+out/
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
