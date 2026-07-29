@@ -70,7 +70,29 @@ Either way, `backup` splits `secret.txt` into 3 shares (any 2 of which reconstru
   <img src="example/demo_1.png" alt="A single CryptoUtils backup share card, showing a QR code, hex dump and checksum barcode" width="420">
 </p>
 
-Later, any 2 of the 3 shares (scanned back with `qr scan`, or typed in by hand from the hex block) are enough to reconstruct the original file with `restore file`.
+Later, any 2 of the 3 shares are enough to reconstruct the original file. `restore` reads each chunk argument as either a QR code image path or a raw hex string typed in by hand from the card's hex block — the two can even be mixed. Scripted:
+
+```
+$ cryptoutils restore file recovered.txt demo_1.png demo_2.png
+Restored file written to recovered.txt
+```
+
+Interactive:
+
+```
+cu> restore
+Backup source type?
+  file - File (Restore into a file on disk)
+  text - Text (Restore into plain text)
+  seed - Seed (Restore a BIP-39 mnemonic phrase)
+[file/text/seed] file
+Output path for the restored file? recovered.txt
+How many chunks were there in total? 3
+Chunk #1: file path, hex string, or empty to skip: demo_1.png
+Chunk #2: file path, hex string, or empty to skip: 
+Chunk #3: file path, hex string, or empty to skip: demo_3.png
+Restored file written to recovered.txt
+```
 
 ## Shamir's Secret Sharing
 
