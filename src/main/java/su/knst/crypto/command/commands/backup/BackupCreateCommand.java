@@ -20,6 +20,7 @@ import su.knst.crypto.utils.codes.ShareCardImage;
 import su.knst.crypto.utils.codes.SharePrintLayoutPlanner;
 import su.knst.crypto.utils.codes.SharePrintPageRenderer;
 import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
+import su.knst.crypto.utils.codes.TagImage;
 import su.knst.crypto.utils.exceptions.WrongMnemonicException;
 
 import javax.imageio.ImageIO;
@@ -58,8 +59,9 @@ public class BackupCreateCommand extends Command {
         return resolve(in);
     }
 
-    // Argument order (type, name, all_parts, for_recover, source...) matches args() and is relied
-    // on by scripted callers, so it's kept identical for the interactive prompt sequence too.
+    // Argument order (type, name, tag_name, all_parts, for_recover, source...) matches args() and
+    // is relied on by scripted callers, so it's kept identical for the interactive prompt sequence
+    // too.
     private CommandResult resolve(ArgSource in) {
         Optional<String> oType = in.choice("Backup source type?", TYPE_CHOICES);
 
@@ -72,6 +74,14 @@ public class BackupCreateCommand extends Command {
 
         if (oName.isEmpty())
             return CommandResult.error("No input");
+
+        // Not a yes/no question: the answer itself decides whether tags are printed. Empty input
+        // (or the scripted "null" placeholder, same convention as ShamirCommand/
+        // BackupRestoreCommand's other optional positional slots) means "skip tags"; any other
+        // answer both opts in and supplies the label printed on them, which is deliberately a
+        // separate piece of text from the backup name above.
+        Optional<String> oTagName = in.string("Name for the container tags? (empty to skip printing tags)");
+        String tagName = (oTagName.isPresent() && !oTagName.get().equalsIgnoreCase("null")) ? oTagName.get() : null;
 
         Optional<Integer> oAllParts = in.integer("Total number of parts (N)?");
 
@@ -127,10 +137,10 @@ public class BackupCreateCommand extends Command {
             }
         }
 
-        return finish(type, oName.get(), oAllParts.get(), oForRecover.get(), secret);
+        return finish(type, oName.get(), tagName, oAllParts.get(), oForRecover.get(), secret);
     }
 
-    private CommandResult finish(String type, String name, int allParts, int forRecover, byte[] secret) {
+    private CommandResult finish(String type, String name, String tagName, int allParts, int forRecover, byte[] secret) {
         if (secret.length == 0)
             return CommandResult.error("Source data is empty");
 
@@ -148,6 +158,7 @@ public class BackupCreateCommand extends Command {
         String typeLabel = type.toUpperCase();
         LocalDate createdOn = LocalDate.now();
         Map<Integer, BufferedImage> images = null;
+        Map<Integer, String> finalChecksumByPart = null;
         ErrorCorrectionLevel appliedLevel = null;
         boolean appliedHasQr = true;
 
@@ -239,6 +250,7 @@ public class BackupCreateCommand extends Command {
             }
 
             images = candidate;
+            finalChecksumByPart = checksumByPart;
             appliedLevel = fittingLevel;
         }
 
@@ -260,12 +272,45 @@ public class BackupCreateCommand extends Command {
             return CommandResult.error("Failed to write chunk files: " + e.getMessage());
         }
 
-        List<BufferedImage> orderedImages = new ArrayList<>(images.values());
+        boolean includeTags = tagName != null;
+        Map<Integer, BufferedImage> tagImages = new LinkedHashMap<>();
+        List<Path> writtenTags = new ArrayList<>();
 
-        List<SharePrintLayoutPlanner.CardInput> cardInputs = new ArrayList<>();
+        if (includeTags) {
+            try {
+                for (int i = 1; i <= allParts; i++) {
+                    BufferedImage tagImage;
 
-        for (BufferedImage image : orderedImages)
-            cardInputs.add(new SharePrintLayoutPlanner.CardInput(image.getWidth(), image.getHeight()));
+                    try {
+                        tagImage = TagImage.build(new TagImage.TagData(
+                                tagName, i, allParts, finalChecksumByPart.get(i)));
+                    } catch (WriterException e) {
+                        return CommandResult.error("Tag " + i + " failed to render: " + e.getMessage());
+                    }
+
+                    Path path = Main.getCurrentPath().resolve(name + "_tag_" + i + ".png");
+
+                    FileUtils.createOwnerOnly(path);
+                    ShareCardImage.writePng(tagImage, path, PNG_DPI, TagImage.RENDER_SCALE);
+
+                    tagImages.put(i, tagImage);
+                    writtenTags.add(path);
+                }
+            } catch (IOException e) {
+                return CommandResult.error("Failed to write tag files: " + e.getMessage());
+            }
+        }
+
+        // Cards and tags are interleaved per share (card1, tag1, card2, tag2, ...) rather than
+        // grouped, so a share's card and tag stay physically adjacent on the printed sheet.
+        List<BufferedImage> orderedImages = new ArrayList<>();
+
+        for (int i = 1; i <= allParts; i++) {
+            orderedImages.add(images.get(i));
+
+            if (includeTags)
+                orderedImages.add(tagImages.get(i));
+        }
 
         List<Path> writtenPrintPages = new ArrayList<>();
         String printFailure = null;
@@ -273,10 +318,10 @@ public class BackupCreateCommand extends Command {
         try {
             int cardWidthPx = orderedImages.get(0).getWidth();
 
-            SharePrintLayoutPlanner.PrintPlan printPlan = SharePrintLayoutPlanner.plan(
-                    cardInputs, SharePrintLayoutPlanner.PageConfig.a4FittingCardWidth(cardWidthPx));
+            List<SharePrintLayoutPlanner.PrintPage> printPlan = SharePrintLayoutPlanner.plan(
+                    orderedImages, SharePrintLayoutPlanner.PageConfig.a4FittingCardWidth(cardWidthPx));
 
-            List<BufferedImage> printPages = SharePrintPageRenderer.render(printPlan, orderedImages);
+            List<BufferedImage> printPages = SharePrintPageRenderer.render(printPlan);
 
             for (int i = 0; i < printPages.size(); i++) {
                 Path path = Main.getCurrentPath().resolve(name + "_print_" + (i + 1) + ".png");
@@ -286,7 +331,7 @@ public class BackupCreateCommand extends Command {
 
                 writtenPrintPages.add(path);
             }
-        } catch (SharePrintLayoutPlanner.CardTooLargeException | IOException e) {
+        } catch (SharePrintLayoutPlanner.ImageTooLargeException | IOException e) {
             // per-share PNGs are already written and are the authoritative backup; print sheets
             // are a convenience feature only and must never fail the whole command. A layout
             // failure (one share too large to print) rolls back to no print sheets at all rather
@@ -305,6 +350,13 @@ public class BackupCreateCommand extends Command {
 
         for (Path path : written)
             builder.line(path.getFileName().toString());
+
+        if (!writtenTags.isEmpty()) {
+            builder.line("\nTags:");
+
+            for (Path path : writtenTags)
+                builder.line(path.getFileName().toString());
+        }
 
         if (!writtenPrintPages.isEmpty()) {
             builder.line("\nPrint sheets:");
@@ -378,7 +430,7 @@ public class BackupCreateCommand extends Command {
 
     @Override
     public String args() {
-        return "file|text|seed <name> <all_parts> <parts_for_recover> <source...>";
+        return "file|text|seed <name> <tag_name|null> <all_parts> <parts_for_recover> <source...>";
     }
 
     @Override

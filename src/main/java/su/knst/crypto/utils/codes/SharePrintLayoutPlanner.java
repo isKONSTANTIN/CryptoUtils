@@ -1,31 +1,31 @@
 package su.knst.crypto.utils.codes;
 
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 
 /**
- * Decides how to tile a list of rectangular print items (backup share cards, but also arbitrary
- * other images/labels of their own size) onto as few A4 sheets as possible for printing. Pure
- * data in/data out - no AWT dependency - so the packing logic can be unit tested without
- * rendering anything.
- *
- * Items are given as a plain list and never reordered or tagged with an index: the returned
- * {@link PrintPlan#placements()} list is positional - entry {@code i} is where {@code cards.get(i)}
- * landed - so the caller zips its own image list against both lists by position.
+ * Decides how to tile a list of arbitrary-sized images (backup share cards, container tags, or
+ * anything else) onto as few A4 sheets as possible for printing. Reads each image's own pixel
+ * dimensions - callers don't need to extract them - and returns full pages, each carrying its own
+ * placed images, ready to be rendered by {@link SharePrintPageRenderer}.
  *
  * Items are always drawn upright (never rotated); instead the SHEET orientation is chosen per
  * item. A landscape A4 sheet (297mm wide, 210mm tall) is preferred by default. An item that
  * doesn't fit a landscape sheet is routed to a portrait sheet instead, whose height (297mm - the
  * paper's actual long edge) is the most vertical room any single A4 sheet can ever offer, in
  * either orientation. An item that doesn't fit EITHER orientation genuinely cannot be printed on
- * a single A4 sheet: {@link #plan} throws {@link CardTooLargeException} and produces no plan at
+ * a single A4 sheet: {@link #plan} throws {@link ImageTooLargeException} and produces no plan at
  * all rather than a partial one, since a print run either fully succeeds or doesn't happen.
  *
- * Packing within a sheet is shelf-based: items are placed left to right into the current shelf
- * (row) as long as they fit its remaining width and the shelf's height (which grows to fit the
- * tallest item placed in it so far, as long as growing it still fits the page); once an item
- * doesn't fit, the current shelf is closed and a new one opens below it, or a new page if the
- * page is out of vertical room too.
+ * Packing within a sheet uses Shelf Best-Fit Decreasing Height (BFDH): images routed to the same
+ * orientation are sorted tallest-first, then each is placed into whichever already-open shelf on
+ * the current page wastes the least leftover width (best fit), rather than always appending to the
+ * newest shelf. Because images arrive tallest-first, a shelf's height is fixed by the first image
+ * placed into it and never grows afterward - this is what keeps BFDH efficient under wildly
+ * different image sizes. Only when no open shelf fits does a new shelf open below the last one, or
+ * a new page if the page is out of vertical room too.
  */
 public final class SharePrintLayoutPlanner {
     private SharePrintLayoutPlanner() {
@@ -35,23 +35,20 @@ public final class SharePrintLayoutPlanner {
         PORTRAIT, LANDSCAPE
     }
 
-    public record CardInput(int widthPx, int heightPx) {
+    public record PlacedImage(BufferedImage image, int x, int y) {
     }
 
-    public record Placement(int pageIndex, int x, int y) {
-    }
-
-    public record PrintPage(Orientation orientation, int widthPx, int heightPx) {
-    }
-
-    public record PrintPlan(List<PrintPage> pages, List<Placement> placements) {
+    public record PrintPage(Orientation orientation, int widthPx, int heightPx, List<PlacedImage> items) {
     }
 
     public record PageConfig(int portraitWidthPx, int portraitHeightPx) {
-        // A share card is always exactly 42mm wide (1/5 of A4's 210mm width) by design - see
-        // ShareCardImage - regardless of how many raw pixels that renders to (supersampling
-        // factors etc.), so deriving the page size from the actual rendered card width keeps
-        // this correct without depending on ShareCardImage's internal pixel/DPI conventions.
+        // Deriving page size from a flat DPI would assume every input image's raw pixels are
+        // exactly that dense, but ShareCardImage/TagImage supersample their canvases (RENDER_SCALE
+        // 2x/6x) for crisper text/lines, so their actual raw pixel density is well above the
+        // nominal "300 DPI" written into the PNG metadata. Anchoring the page size to a share
+        // card's own already-rendered pixel width instead - which is always exactly 42mm (1/5 of
+        // A4's 210mm width) by design, see ShareCardImage - keeps card pixels and page pixels in
+        // the same scale regardless of supersampling, without needing to know any DPI at all.
         public static PageConfig a4FittingCardWidth(int cardWidthPx) {
             double pxPerMm = cardWidthPx / 42.0;
 
@@ -69,112 +66,131 @@ public final class SharePrintLayoutPlanner {
         }
     }
 
-    public static class CardTooLargeException extends Exception {
-        public CardTooLargeException(String message) {
+    public static class ImageTooLargeException extends Exception {
+        public ImageTooLargeException(String message) {
             super(message);
         }
     }
 
-    // Mutable packing state for the page currently being filled in one orientation: which page
-    // (by index into the shared, global page list) and the state of its current, still-open shelf.
-    private static final class PageCursor {
-        final int pageIndex;
-        int shelfY;
-        int shelfHeight;
-        int shelfRemainingWidth;
+    public static List<PrintPage> plan(List<BufferedImage> images, PageConfig pageConfig)
+            throws ImageTooLargeException {
+        validateEveryImageFitsSomewhere(images, pageConfig);
 
-        PageCursor(int pageIndex, int shelfY, int shelfHeight, int shelfRemainingWidth) {
-            this.pageIndex = pageIndex;
-            this.shelfY = shelfY;
-            this.shelfHeight = shelfHeight;
-            this.shelfRemainingWidth = shelfRemainingWidth;
+        List<BufferedImage> landscapeImages = new ArrayList<>();
+        List<BufferedImage> portraitImages = new ArrayList<>();
+
+        for (BufferedImage image : images) {
+            if (fitsLandscape(image, pageConfig))
+                landscapeImages.add(image);
+            else
+                portraitImages.add(image);
         }
-    }
-
-    public static PrintPlan plan(List<CardInput> cards, PageConfig pageConfig) throws CardTooLargeException {
-        validateEveryCardFitsSomewhere(cards, pageConfig);
 
         List<PrintPage> pages = new ArrayList<>();
-        List<Placement> placements = new ArrayList<>();
 
-        PageCursor landscapeCursor = null;
-        PageCursor portraitCursor = null;
+        packOrientation(landscapeImages, Orientation.LANDSCAPE,
+                pageConfig.landscapeWidthPx(), pageConfig.landscapeHeightPx(), pages);
+        packOrientation(portraitImages, Orientation.PORTRAIT,
+                pageConfig.portraitWidthPx(), pageConfig.portraitHeightPx(), pages);
 
-        for (CardInput card : cards) {
-            boolean fitsLandscape = card.widthPx() <= pageConfig.landscapeWidthPx()
-                    && card.heightPx() <= pageConfig.landscapeHeightPx();
-
-            if (fitsLandscape) {
-                PlaceResult result = place(card, landscapeCursor, Orientation.LANDSCAPE,
-                        pageConfig.landscapeWidthPx(), pageConfig.landscapeHeightPx(), pages);
-                landscapeCursor = result.cursor();
-                placements.add(result.placement());
-            } else {
-                PlaceResult result = place(card, portraitCursor, Orientation.PORTRAIT,
-                        pageConfig.portraitWidthPx(), pageConfig.portraitHeightPx(), pages);
-                portraitCursor = result.cursor();
-                placements.add(result.placement());
-            }
-        }
-
-        return new PrintPlan(pages, placements);
+        return pages;
     }
 
-    private static void validateEveryCardFitsSomewhere(List<CardInput> cards, PageConfig pageConfig)
-            throws CardTooLargeException {
-        for (int i = 0; i < cards.size(); i++) {
-            CardInput card = cards.get(i);
+    private static boolean fitsLandscape(BufferedImage image, PageConfig pageConfig) {
+        return image.getWidth() <= pageConfig.landscapeWidthPx()
+                && image.getHeight() <= pageConfig.landscapeHeightPx();
+    }
 
-            boolean fitsLandscape = card.widthPx() <= pageConfig.landscapeWidthPx()
-                    && card.heightPx() <= pageConfig.landscapeHeightPx();
-            boolean fitsPortrait = card.widthPx() <= pageConfig.portraitWidthPx()
-                    && card.heightPx() <= pageConfig.portraitHeightPx();
+    private static void validateEveryImageFitsSomewhere(List<BufferedImage> images, PageConfig pageConfig)
+            throws ImageTooLargeException {
+        for (int i = 0; i < images.size(); i++) {
+            BufferedImage image = images.get(i);
+
+            boolean fitsLandscape = fitsLandscape(image, pageConfig);
+            boolean fitsPortrait = image.getWidth() <= pageConfig.portraitWidthPx()
+                    && image.getHeight() <= pageConfig.portraitHeightPx();
 
             if (!fitsLandscape && !fitsPortrait)
-                throw new CardTooLargeException("card at position " + i + " (" + card.widthPx() + "x"
-                        + card.heightPx() + "px) does not fit on an A4 sheet in either orientation");
+                throw new ImageTooLargeException("image at position " + i + " (" + image.getWidth() + "x"
+                        + image.getHeight() + "px) does not fit on an A4 sheet in either orientation");
         }
     }
 
-    private record PlaceResult(PageCursor cursor, Placement placement) {
+    // Mutable packing state for one shelf (row) on the page currently being filled.
+    private static final class Shelf {
+        final int y;
+        final int height;
+        int remainingWidth;
+
+        Shelf(int y, int height, int remainingWidth) {
+            this.y = y;
+            this.height = height;
+            this.remainingWidth = remainingWidth;
+        }
     }
 
-    private static PlaceResult place(CardInput card, PageCursor cursor, Orientation orientation,
-                                      int pageWidthPx, int pageHeightPx, List<PrintPage> pages) {
-        int w = card.widthPx();
-        int h = card.heightPx();
+    private static void packOrientation(List<BufferedImage> images, Orientation orientation,
+                                         int pageWidthPx, int pageHeightPx, List<PrintPage> pages) {
+        if (images.isEmpty())
+            return;
 
-        if (cursor != null) {
-            if (cursor.shelfRemainingWidth >= w) {
-                int grownShelfHeight = Math.max(cursor.shelfHeight, h);
+        List<BufferedImage> sorted = new ArrayList<>(images);
+        sorted.sort(Comparator.comparingInt((BufferedImage image) -> image.getHeight()).reversed());
 
-                if (cursor.shelfY + grownShelfHeight <= pageHeightPx) {
-                    int x = pageWidthPx - cursor.shelfRemainingWidth;
-                    int y = cursor.shelfY;
+        List<PlacedImage> currentPageItems = null;
+        List<Shelf> openShelves = null;
+        int usedPageHeight = 0;
 
-                    cursor.shelfRemainingWidth -= w;
-                    cursor.shelfHeight = grownShelfHeight;
+        for (BufferedImage image : sorted) {
+            int w = image.getWidth();
+            int h = image.getHeight();
 
-                    return new PlaceResult(cursor, new Placement(cursor.pageIndex, x, y));
+            Shelf bestShelf = null;
+
+            if (openShelves != null) {
+                int bestWaste = Integer.MAX_VALUE;
+
+                for (Shelf shelf : openShelves) {
+                    if (shelf.remainingWidth >= w) {
+                        int waste = shelf.remainingWidth - w;
+
+                        if (waste < bestWaste) {
+                            bestWaste = waste;
+                            bestShelf = shelf;
+                        }
+                    }
                 }
             }
 
-            int newShelfY = cursor.shelfY + cursor.shelfHeight;
+            if (bestShelf != null) {
+                int x = pageWidthPx - bestShelf.remainingWidth;
 
-            if (newShelfY + h <= pageHeightPx) {
-                cursor.shelfY = newShelfY;
-                cursor.shelfHeight = h;
-                cursor.shelfRemainingWidth = pageWidthPx - w;
-
-                return new PlaceResult(cursor, new Placement(cursor.pageIndex, 0, newShelfY));
+                currentPageItems.add(new PlacedImage(image, x, bestShelf.y));
+                bestShelf.remainingWidth -= w;
+                continue;
             }
+
+            if (openShelves != null && usedPageHeight + h <= pageHeightPx) {
+                Shelf shelf = new Shelf(usedPageHeight, h, pageWidthPx - w);
+                openShelves.add(shelf);
+                currentPageItems.add(new PlacedImage(image, 0, shelf.y));
+                usedPageHeight += h;
+                continue;
+            }
+
+            if (currentPageItems != null)
+                pages.add(new PrintPage(orientation, pageWidthPx, pageHeightPx, currentPageItems));
+
+            currentPageItems = new ArrayList<>();
+            openShelves = new ArrayList<>();
+
+            Shelf shelf = new Shelf(0, h, pageWidthPx - w);
+            openShelves.add(shelf);
+            currentPageItems.add(new PlacedImage(image, 0, shelf.y));
+            usedPageHeight = h;
         }
 
-        PrintPage freshPage = new PrintPage(orientation, pageWidthPx, pageHeightPx);
-        pages.add(freshPage);
-
-        PageCursor freshCursor = new PageCursor(pages.size() - 1, 0, h, pageWidthPx - w);
-
-        return new PlaceResult(freshCursor, new Placement(freshCursor.pageIndex, 0, 0));
+        if (currentPageItems != null)
+            pages.add(new PrintPage(orientation, pageWidthPx, pageHeightPx, currentPageItems));
     }
 }

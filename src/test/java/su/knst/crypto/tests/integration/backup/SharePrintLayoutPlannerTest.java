@@ -2,14 +2,13 @@ package su.knst.crypto.tests.integration.backup;
 
 import org.junit.jupiter.api.Test;
 import su.knst.crypto.utils.codes.SharePrintLayoutPlanner;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.CardInput;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.CardTooLargeException;
+import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.ImageTooLargeException;
 import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.Orientation;
 import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PageConfig;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.Placement;
+import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PlacedImage;
 import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PrintPage;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PrintPlan;
 
+import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,168 +20,194 @@ class SharePrintLayoutPlannerTest {
     private static final PageConfig TEST_CONFIG = new PageConfig(500, 1000);
     private static final int CARD_WIDTH = 100;
 
-    private static List<CardInput> cards(int... heights) {
-        List<CardInput> cards = new ArrayList<>();
+    private static BufferedImage image(int width, int height) {
+        return new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+    }
+
+    private static List<BufferedImage> images(int... heights) {
+        List<BufferedImage> images = new ArrayList<>();
 
         for (int height : heights)
-            cards.add(new CardInput(CARD_WIDTH, height));
+            images.add(image(CARD_WIDTH, height));
 
-        return cards;
+        return images;
     }
 
-    private static PrintPlan plan(List<CardInput> cards) throws CardTooLargeException {
-        return SharePrintLayoutPlanner.plan(cards, TEST_CONFIG);
+    private static List<PrintPage> plan(List<BufferedImage> images) throws ImageTooLargeException {
+        return SharePrintLayoutPlanner.plan(images, TEST_CONFIG);
     }
 
-    @Test
-    void zeroCardsProducesEmptyPlan() throws CardTooLargeException {
-        PrintPlan plan = plan(List.of());
+    private static int totalItems(List<PrintPage> pages) {
+        int total = 0;
 
-        assertTrue(plan.pages().isEmpty());
-        assertTrue(plan.placements().isEmpty());
-    }
+        for (PrintPage page : pages)
+            total += page.items().size();
 
-    @Test
-    void shortCardsGoOnALandscapePageByDefault() throws CardTooLargeException {
-        PrintPlan plan = plan(cards(50, 50, 50));
-
-        assertEquals(1, plan.pages().size());
-        assertEquals(Orientation.LANDSCAPE, plan.pages().get(0).orientation());
-        assertEquals(TEST_CONFIG.landscapeWidthPx(), plan.pages().get(0).widthPx());
-        assertEquals(TEST_CONFIG.landscapeHeightPx(), plan.pages().get(0).heightPx());
+        return total;
     }
 
     @Test
-    void cardsPackLeftToRightIntoAShelfThenWrapToANewShelfBelow() throws CardTooLargeException {
-        // landscape page is 1000 wide; 100px-wide cards -> 10 fit in one shelf before wrapping.
+    void zeroImagesProducesEmptyPlan() throws ImageTooLargeException {
+        List<PrintPage> plan = plan(List.of());
+
+        assertTrue(plan.isEmpty());
+    }
+
+    @Test
+    void shortImagesGoOnALandscapePageByDefault() throws ImageTooLargeException {
+        List<PrintPage> plan = plan(images(50, 50, 50));
+
+        assertEquals(1, plan.size());
+        assertEquals(Orientation.LANDSCAPE, plan.get(0).orientation());
+        assertEquals(TEST_CONFIG.landscapeWidthPx(), plan.get(0).widthPx());
+        assertEquals(TEST_CONFIG.landscapeHeightPx(), plan.get(0).heightPx());
+    }
+
+    @Test
+    void imagesPackLeftToRightIntoAShelfThenWrapToANewShelfBelow() throws ImageTooLargeException {
+        // landscape page is 1000 wide; 100px-wide images -> 10 fit in one shelf before wrapping.
         int[] heights = new int[11];
         java.util.Arrays.fill(heights, 50);
 
-        PrintPlan plan = plan(cards(heights));
+        List<PrintPage> plan = plan(images(heights));
 
-        assertEquals(1, plan.pages().size());
-        assertEquals(11, plan.placements().size());
+        assertEquals(1, plan.size());
 
+        List<PlacedImage> items = plan.get(0).items();
+        assertEquals(11, items.size());
+
+        // all same height -> sort is stable, input order preserved within the shelf pass.
         for (int i = 0; i < 10; i++) {
-            Placement placement = plan.placements().get(i);
-            assertEquals(0, placement.pageIndex());
-            assertEquals(i * CARD_WIDTH, placement.x());
-            assertEquals(0, placement.y());
+            PlacedImage placed = items.get(i);
+            assertEquals(i * CARD_WIDTH, placed.x());
+            assertEquals(0, placed.y());
         }
 
-        // 11th card wraps to a new shelf below the first (shelf height was 50).
-        Placement last = plan.placements().get(10);
+        // 11th image wraps to a new shelf below the first (shelf height was 50).
+        PlacedImage last = items.get(10);
         assertEquals(0, last.x());
         assertEquals(50, last.y());
     }
 
     @Test
-    void shelfHeightGrowsToFitTheTallestItemPlacedInIt() throws CardTooLargeException {
-        // first item sets shelf height 50, second (still fitting width-wise) is taller (80) and
-        // grows the shelf; a third item must then start below at y=80, not y=50.
-        List<CardInput> input = List.of(
-                new CardInput(100, 50),
-                new CardInput(100, 80),
-                new CardInput(1000, 30)); // full width -> forces a new shelf regardless
-        PrintPlan plan = plan(input);
-
-        assertEquals(1, plan.pages().size());
-
-        Placement third = plan.placements().get(2);
-        assertEquals(0, third.x());
-        assertEquals(80, third.y());
-    }
-
-    @Test
-    void tallCardEscalatesToPortraitPage() throws CardTooLargeException {
+    void tallImageEscalatesToPortraitPage() throws ImageTooLargeException {
         // taller than landscape's 500px budget, but fits portrait's 1000px.
-        PrintPlan plan = plan(cards(600));
+        List<PrintPage> plan = plan(images(600));
 
-        assertEquals(1, plan.pages().size());
+        assertEquals(1, plan.size());
 
-        PrintPage page = plan.pages().get(0);
+        PrintPage page = plan.get(0);
         assertEquals(Orientation.PORTRAIT, page.orientation());
         assertEquals(TEST_CONFIG.portraitWidthPx(), page.widthPx());
         assertEquals(TEST_CONFIG.portraitHeightPx(), page.heightPx());
 
-        Placement placement = plan.placements().get(0);
-        assertEquals(0, placement.x());
-        assertEquals(0, placement.y());
+        PlacedImage placed = page.items().get(0);
+        assertEquals(0, placed.x());
+        assertEquals(0, placed.y());
     }
 
     @Test
-    void cardExactlyAtLandscapeHeightBoundaryStillUsesLandscape() throws CardTooLargeException {
-        PrintPlan plan = plan(cards(500));
+    void imageExactlyAtLandscapeHeightBoundaryStillUsesLandscape() throws ImageTooLargeException {
+        List<PrintPage> plan = plan(images(500));
 
-        assertEquals(Orientation.LANDSCAPE, plan.pages().get(0).orientation());
+        assertEquals(Orientation.LANDSCAPE, plan.get(0).orientation());
     }
 
     @Test
-    void cardExactlyAtPortraitHeightBoundaryFits() throws CardTooLargeException {
-        PrintPlan plan = plan(cards(1000));
+    void imageExactlyAtPortraitHeightBoundaryFits() throws ImageTooLargeException {
+        List<PrintPage> plan = plan(images(1000));
 
-        assertEquals(1, plan.pages().size());
-        assertEquals(Orientation.PORTRAIT, plan.pages().get(0).orientation());
+        assertEquals(1, plan.size());
+        assertEquals(Orientation.PORTRAIT, plan.get(0).orientation());
     }
 
     @Test
-    void cardTooTallForEitherOrientationRollsBackWithNoPlanAtAll() {
-        List<CardInput> input = List.of(new CardInput(CARD_WIDTH, 50), new CardInput(CARD_WIDTH, 1001));
+    void imageTooTallForEitherOrientationRollsBackWithNoPlanAtAll() {
+        List<BufferedImage> input = List.of(image(CARD_WIDTH, 50), image(CARD_WIDTH, 1001));
 
-        CardTooLargeException ex = assertThrows(CardTooLargeException.class, () -> plan(input));
+        ImageTooLargeException ex = assertThrows(ImageTooLargeException.class, () -> plan(input));
 
         assertTrue(ex.getMessage().contains("1"));
     }
 
     @Test
-    void cardTooWideForEitherOrientationRollsBack() {
+    void imageTooWideForEitherOrientationRollsBack() {
         // width 1001 > portrait width (500) and > landscape width (1000).
-        List<CardInput> input = List.of(new CardInput(1001, 50));
+        List<BufferedImage> input = List.of(image(1001, 50));
 
-        assertThrows(CardTooLargeException.class, () -> plan(input));
+        assertThrows(ImageTooLargeException.class, () -> plan(input));
     }
 
     @Test
     void widthFitsLandscapeButNotPortraitAndHeightForcesPortraitIsTooLarge() {
         // width 600 fits landscape's 1000 width but not portrait's 500 width; height 600
         // doesn't fit landscape's 500 height -> needs portrait, but portrait width is too small.
-        List<CardInput> input = List.of(new CardInput(600, 600));
+        List<BufferedImage> input = List.of(image(600, 600));
 
-        assertThrows(CardTooLargeException.class, () -> plan(input));
+        assertThrows(ImageTooLargeException.class, () -> plan(input));
     }
 
     @Test
-    void placementsArePositionalAndFollowInputOrder() throws CardTooLargeException {
-        PrintPlan plan = plan(cards(50, 50, 50));
+    void bestFitReusesAnEarlierShelfsLeftoverWidthInsteadOfAlwaysUsingTheNewestShelf() throws ImageTooLargeException {
+        // Sorted tallest-first: 80 tall (width 900, opens shelf A with 100px left), then 50 tall
+        // (width 900, doesn't fit shelf A's 100px remaining -> opens shelf B below with 100px
+        // left), then a 90-wide image that fits both shelf A and B's leftover 100px - best-fit
+        // must pick the shelf wasting the least width, i.e. whichever leaves less slack. Both
+        // leave 10px slack here, so make them differ: shelf A leftover 100, shelf B leftover 100
+        // is ambiguous, so use a case where B's remainder is trimmed further first.
+        BufferedImage tall = image(900, 80);
+        BufferedImage medium = image(850, 50);
+        BufferedImage small = image(90, 10);
 
-        assertEquals(3, plan.placements().size());
+        // tall -> shelf A (y=0, height=80, remainingWidth=100)
+        // medium -> doesn't fit shelf A (100 < 850) -> shelf B (y=80, height=50, remainingWidth=150)
+        // small (width 90) -> fits shelf A (remainingWidth 100, waste 10) and shelf B
+        //   (remainingWidth 150, waste 60) -> best fit picks shelf A.
+        List<PrintPage> plan = plan(List.of(tall, medium, small));
 
-        for (int i = 0; i < 3; i++)
-            assertEquals(i * CARD_WIDTH, plan.placements().get(i).x());
+        assertEquals(1, plan.size());
+
+        List<PlacedImage> items = plan.get(0).items();
+        assertEquals(3, items.size());
+
+        PlacedImage placedSmall = items.stream().filter(p -> p.image() == small).findFirst().orElseThrow();
+
+        assertEquals(900, placedSmall.x());
+        assertEquals(0, placedSmall.y());
     }
 
     @Test
-    void mixedWidthItemsPackWithoutOverlap() throws CardTooLargeException {
-        // a wide "label" mixed in with narrower cards, all on one landscape page (width 1000).
-        List<CardInput> input = List.of(
-                new CardInput(100, 50),
-                new CardInput(400, 60),
-                new CardInput(100, 50));
-        PrintPlan plan = plan(input);
+    void placementsCoverEveryInputImageExactlyOnce() throws ImageTooLargeException {
+        List<BufferedImage> input = images(50, 50, 50);
+        List<PrintPage> plan = plan(input);
 
-        assertEquals(1, plan.pages().size());
+        assertEquals(3, totalItems(plan));
 
-        Placement p0 = plan.placements().get(0);
-        Placement p1 = plan.placements().get(1);
-        Placement p2 = plan.placements().get(2);
+        for (BufferedImage img : input) {
+            long count = plan.stream()
+                    .flatMap(p -> p.items().stream())
+                    .filter(placed -> placed.image() == img)
+                    .count();
 
-        assertEquals(0, p0.x());
-        assertEquals(100, p1.x());
-        assertEquals(500, p2.x());
+            assertEquals(1, count);
+        }
     }
 
     @Test
-    void realA4ConfigDerivedFromActualCardPixelWidth() throws CardTooLargeException {
+    void mixedWidthItemsPackWithoutOverlap() throws ImageTooLargeException {
+        // a wide "label" mixed in with narrower images, all on one landscape page (width 1000).
+        List<BufferedImage> input = List.of(
+                image(100, 50),
+                image(400, 60),
+                image(100, 50));
+        List<PrintPage> plan = plan(input);
+
+        assertEquals(1, plan.size());
+        assertNoOverlapsAndWithinBounds(plan);
+    }
+
+    @Test
+    void realA4ConfigDerivedFromActualCardPixelWidth() throws ImageTooLargeException {
         int cardWidth = 992; // real rendered card width (496 nominal design px * 2x supersample)
         PageConfig a4 = PageConfig.a4FittingCardWidth(cardWidth);
 
@@ -190,10 +215,36 @@ class SharePrintLayoutPlannerTest {
         assertEquals(5, a4.portraitWidthPx() / cardWidth);
         assertEquals(7, a4.landscapeWidthPx() / cardWidth);
 
-        PrintPlan plan = SharePrintLayoutPlanner.plan(
-                List.of(new CardInput(cardWidth, 1200), new CardInput(cardWidth, 1200)), a4);
+        List<PrintPage> plan = SharePrintLayoutPlanner.plan(
+                List.of(image(992, 1200), image(992, 1200)), a4);
 
-        assertEquals(1, plan.pages().size());
-        assertEquals(Orientation.LANDSCAPE, plan.pages().get(0).orientation());
+        assertEquals(1, plan.size());
+        assertEquals(Orientation.LANDSCAPE, plan.get(0).orientation());
+    }
+
+    private static void assertNoOverlapsAndWithinBounds(List<PrintPage> pages) {
+        for (PrintPage page : pages) {
+            List<int[]> rects = new ArrayList<>();
+
+            for (PlacedImage placed : page.items()) {
+                int x0 = placed.x();
+                int y0 = placed.y();
+                int x1 = x0 + placed.image().getWidth();
+                int y1 = y0 + placed.image().getHeight();
+
+                assertTrue(x0 >= 0 && y0 >= 0 && x1 <= page.widthPx() && y1 <= page.heightPx(),
+                        "placement out of page bounds: " + placed);
+
+                for (int[] other : rects)
+                    assertFalse(overlaps(x0, y0, x1, y1, other[0], other[1], other[2], other[3]),
+                            "overlapping placements on the same page");
+
+                rects.add(new int[]{x0, y0, x1, y1});
+            }
+        }
+    }
+
+    private static boolean overlaps(int ax0, int ay0, int ax1, int ay1, int bx0, int by0, int bx1, int by1) {
+        return ax0 < bx1 && bx0 < ax1 && ay0 < by1 && by0 < ay1;
     }
 }

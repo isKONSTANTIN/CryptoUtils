@@ -84,7 +84,7 @@ class BackupCreateCommandTest {
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
-        CommandResult result = command.run(new ParamsContainer("file", name, String.valueOf(n), String.valueOf(k), source.toString()));
+        CommandResult result = command.run(new ParamsContainer("file", name, "null", String.valueOf(n), String.valueOf(k), source.toString()));
 
         assertFalse(result.error(), result.message());
         filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
@@ -108,7 +108,7 @@ class BackupCreateCommandTest {
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("text", name, String.valueOf(n), String.valueOf(k)));
+        List<String> args = new ArrayList<>(List.of("text", name, "null", String.valueOf(n), String.valueOf(k)));
         args.addAll(List.of(text.split(" ")));
 
         CommandResult result = command.run(new ParamsContainer(args));
@@ -137,7 +137,7 @@ class BackupCreateCommandTest {
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("seed", name, String.valueOf(n), String.valueOf(k)));
+        List<String> args = new ArrayList<>(List.of("seed", name, "null", String.valueOf(n), String.valueOf(k)));
         args.addAll(List.of(words));
 
         CommandResult result = command.run(new ParamsContainer(args));
@@ -154,7 +154,7 @@ class BackupCreateCommandTest {
     void tooFewPartsForRecoverIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer("text", "bad_k", "5", "1", "hello"));
+        CommandResult result = command.run(new ParamsContainer("text", "bad_k", "null", "5", "1", "hello"));
 
         assertTrue(result.error());
         assertFalse(Path.of("bad_k_1.png").toFile().exists());
@@ -164,7 +164,7 @@ class BackupCreateCommandTest {
     void allPartsLessThanRequiredIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer("text", "bad_n", "2", "3", "hello"));
+        CommandResult result = command.run(new ParamsContainer("text", "bad_n", "null", "2", "3", "hello"));
 
         assertTrue(result.error());
         assertFalse(Path.of("bad_n_1.png").toFile().exists());
@@ -174,7 +174,7 @@ class BackupCreateCommandTest {
     void wordNotInDictionaryIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("seed", "bad_seed", "5", "3"));
+        List<String> args = new ArrayList<>(List.of("seed", "bad_seed", "null", "5", "3"));
         for (int i = 0; i < 11; i++)
             args.add("abandon");
         args.add("notarealbip39word");
@@ -201,7 +201,7 @@ class BackupCreateCommandTest {
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
-        CommandResult result = command.run(new ParamsContainer("file", name, String.valueOf(n), String.valueOf(k), source.toString()));
+        CommandResult result = command.run(new ParamsContainer("file", name, "null", String.valueOf(n), String.valueOf(k), source.toString()));
 
         assertFalse(result.error(), result.message());
         filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
@@ -218,7 +218,7 @@ class BackupCreateCommandTest {
     void missingSourceIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer("file", "no_source", "3", "2", "this_file_does_not_exist_hopefully"));
+        CommandResult result = command.run(new ParamsContainer("file", "no_source", "null", "3", "2", "this_file_does_not_exist_hopefully"));
 
         assertTrue(result.error());
     }
@@ -230,5 +230,55 @@ class BackupCreateCommandTest {
         CommandResult result = command.run(new ParamsContainer("unknown", "name", "3", "2", "hello"));
 
         assertTrue(result.error());
+    }
+
+    @Test
+    void tagNameProvidedGeneratesTagPerShare() throws Exception {
+        String text = "hello tags";
+        String name = "backup_create_test_tagged";
+        String tagName = "My Container";
+        int n = 3, k = 2;
+
+        for (int i = 1; i <= n; i++) {
+            filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
+            filesToCleanUp.add(Path.of(name + "_tag_" + i + ".png"));
+        }
+
+        BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
+
+        List<String> args = new ArrayList<>(List.of("text", name, tagName, String.valueOf(n), String.valueOf(k)));
+        args.addAll(List.of(text.split(" ")));
+
+        CommandResult result = command.run(new ParamsContainer(args));
+
+        assertFalse(result.error(), result.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
+
+        for (int i = 1; i <= n; i++)
+            assertTrue(Path.of(name + "_tag_" + i + ".png").toFile().isFile());
+
+        assertTrue(result.message().contains(name + "_tag_1.png"));
+    }
+
+    @Test
+    void nullTagNameSkipsTags() throws Exception {
+        String text = "hello no tags";
+        String name = "backup_create_test_untagged";
+        int n = 3, k = 2;
+
+        for (int i = 1; i <= n; i++)
+            filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
+
+        BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
+
+        List<String> args = new ArrayList<>(List.of("text", name, "null", String.valueOf(n), String.valueOf(k)));
+        args.addAll(List.of(text.split(" ")));
+
+        CommandResult result = command.run(new ParamsContainer(args));
+
+        assertFalse(result.error(), result.message());
+        filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
+
+        assertTrue(BackupTestFiles.tagPaths(name).isEmpty());
     }
 }

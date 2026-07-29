@@ -62,7 +62,7 @@ class BackupWorkflowE2ETest {
         for (int i = 1; i <= n; i++)
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
-        CommandResult createResult = create.run(new ParamsContainer("file", name, String.valueOf(n), String.valueOf(k), source.toString()));
+        CommandResult createResult = create.run(new ParamsContainer("file", name, "null", String.valueOf(n), String.valueOf(k), source.toString()));
         assertFalse(createResult.error(), createResult.message());
         filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
@@ -91,7 +91,7 @@ class BackupWorkflowE2ETest {
         for (int i = 1; i <= n; i++)
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
-        List<String> createArgs = new ArrayList<>(List.of("text", name, String.valueOf(n), String.valueOf(k)));
+        List<String> createArgs = new ArrayList<>(List.of("text", name, "null", String.valueOf(n), String.valueOf(k)));
         createArgs.addAll(List.of(text.split(" ")));
 
         CommandResult createResult = create.run(new ParamsContainer(createArgs));
@@ -125,7 +125,7 @@ class BackupWorkflowE2ETest {
         for (int i = 1; i <= n; i++)
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
-        List<String> createArgs = new ArrayList<>(List.of("seed", name, String.valueOf(n), String.valueOf(k)));
+        List<String> createArgs = new ArrayList<>(List.of("seed", name, "null", String.valueOf(n), String.valueOf(k)));
         createArgs.addAll(List.of(words));
 
         CommandResult createResult = create.run(new ParamsContainer(createArgs));

@@ -25,4 +25,16 @@ public final class BackupTestFiles {
             throw new UncheckedIOException(e);
         }
     }
+
+    // Like printSheetPaths - tag count isn't known up front outside the test either (it's just
+    // one per share, but the caller shouldn't have to duplicate that assumption).
+    public static List<Path> tagPaths(String name) {
+        try (var stream = Files.list(Path.of("."))) {
+            return stream
+                    .filter(p -> p.getFileName().toString().startsWith(name + "_tag_"))
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
+    }
 }

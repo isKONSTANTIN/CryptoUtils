@@ -45,7 +45,7 @@ class BackupRestoreCommandTest {
         for (int i = 1; i <= n; i++)
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
-        List<String> args = new ArrayList<>(List.of(type, name, String.valueOf(n), String.valueOf(k)));
+        List<String> args = new ArrayList<>(List.of(type, name, "null", String.valueOf(n), String.valueOf(k)));
         args.addAll(source);
 
         CommandResult result = createCommand.run(new ParamsContainer(args));
