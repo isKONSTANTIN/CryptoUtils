@@ -4,7 +4,7 @@ import org.jline.builtins.Completers;
 import org.jline.reader.Candidate;
 import org.jline.reader.Completer;
 import su.knst.crypto.Main;
-import su.knst.crypto.TerminalWorker;
+import su.knst.crypto.cli.Questioner;
 import su.knst.crypto.utils.worldlists.WordLists;
 
 import java.nio.file.Path;
@@ -12,15 +12,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-// Shared question helpers built on top of TerminalWorker.ask, so every command's interactive
+// Shared question helpers built on top of Questioner.ask, so every command's interactive
 // mode gets the same retry behavior, file/word autocompletion and choice formatting for free.
 public final class Prompts {
     private Prompts() {
     }
 
-    public static Optional<Integer> askInt(TerminalWorker tw, String question) {
+    public static Optional<Integer> askInt(Questioner questioner, String question) {
         while (true) {
-            Optional<String> answer = tw.ask(new TerminalQuestion(question, null));
+            Optional<String> answer = questioner.ask(new TerminalQuestion(question, null));
 
             if (answer.isEmpty())
                 return Optional.empty();
@@ -39,7 +39,7 @@ public final class Prompts {
         }
     }
 
-    public static Optional<String> askChoice(TerminalWorker tw, String question, List<Choice> choices) {
+    public static Optional<String> askChoice(Questioner questioner, String question, List<Choice> choices) {
         int valueWidth = choices.stream().mapToInt(c -> c.value().length()).max().orElse(0);
 
         StringBuilder text = new StringBuilder(question);
@@ -52,7 +52,7 @@ public final class Prompts {
 
         List<String> values = choices.stream().map(Choice::value).toList();
 
-        return tw.ask(new TerminalQuestion(text.toString(), values));
+        return questioner.ask(new TerminalQuestion(text.toString(), values));
     }
 
     private static String padRight(String s, int width) {
@@ -62,18 +62,18 @@ public final class Prompts {
     // Free-text answer with file-path autocompletion, for inputs that accept either a file path
     // or some other raw token (e.g. a hex string) - unlike askExistingFilePath, the answer is not
     // required to resolve to an existing file.
-    public static Optional<String> askStringWithFileCompletion(TerminalWorker tw, String question) {
+    public static Optional<String> askStringWithFileCompletion(Questioner questioner, String question) {
         Completer completer = new Completers.FilesCompleter(Main::getCurrentPath);
 
-        return tw.ask(new TerminalQuestion(question, null, completer)).filter(v -> !v.isBlank());
+        return questioner.ask(new TerminalQuestion(question, null, completer)).filter(v -> !v.isBlank());
     }
 
     // Loops until an existing file is given, or the user cancels with an empty answer.
-    public static Optional<Path> askExistingFilePath(TerminalWorker tw, String question) {
+    public static Optional<Path> askExistingFilePath(Questioner questioner, String question) {
         Completer completer = new Completers.FilesCompleter(Main::getCurrentPath);
 
         while (true) {
-            Optional<String> answer = tw.ask(new TerminalQuestion(question, null, completer));
+            Optional<String> answer = questioner.ask(new TerminalQuestion(question, null, completer));
 
             if (answer.isEmpty() || answer.get().isBlank())
                 return Optional.empty();
@@ -87,10 +87,10 @@ public final class Prompts {
     }
 
     // For output/destination paths that are expected not to exist yet (e.g. generated keys).
-    public static Optional<Path> askNewFilePath(TerminalWorker tw, String question) {
+    public static Optional<Path> askNewFilePath(Questioner questioner, String question) {
         Completer completer = new Completers.FilesCompleter(Main::getCurrentPath);
 
-        Optional<String> answer = tw.ask(new TerminalQuestion(question, null, completer));
+        Optional<String> answer = questioner.ask(new TerminalQuestion(question, null, completer));
 
         if (answer.isEmpty() || answer.get().isBlank())
             return Optional.empty();
@@ -101,7 +101,7 @@ public final class Prompts {
 
     // Free-text words separated by spaces (mnemonic phrases), with completion against the
     // active wordlist for the word currently being typed.
-    public static Optional<String[]> askWords(TerminalWorker tw, String question) {
+    public static Optional<String[]> askWords(Questioner questioner, String question) {
         Completer completer = (reader, line, candidates) ->
                 candidates.addAll(
                         Arrays.stream(WordLists.getActiveList().array())
@@ -110,7 +110,7 @@ public final class Prompts {
                                 .toList()
                 );
 
-        Optional<String> answer = tw.ask(new TerminalQuestion(question, null, completer));
+        Optional<String> answer = questioner.ask(new TerminalQuestion(question, null, completer));
 
         if (answer.isEmpty() || answer.get().isBlank())
             return Optional.empty();

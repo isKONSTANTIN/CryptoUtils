@@ -1,13 +1,10 @@
 package su.knst.crypto.command.commands.backup;
 
 import su.knst.crypto.Main;
-import su.knst.crypto.command.ArgSource;
+import su.knst.crypto.cli.Ask;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
-import su.knst.crypto.command.InteractiveArgSource;
-import su.knst.crypto.command.ParamsContainer;
-import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.core.backup.BackupException;
 import su.knst.crypto.core.backup.BackupRequest;
@@ -37,18 +34,7 @@ public class BackupCreateCommand extends Command {
     );
 
     @Override
-    public CommandResult run(ParamsContainer args) {
-        ArgSource in = args.size() == 0
-                ? new InteractiveArgSource(Main.getTerminalWorker())
-                : new ScriptedArgSource(args);
-
-        return resolve(in);
-    }
-
-    // Argument order (type, name, tag_name, all_parts, for_recover, source...) matches args() and
-    // is relied on by scripted callers, so it's kept identical for the interactive prompt sequence
-    // too.
-    private CommandResult resolve(ArgSource in) {
+    public CommandResult run(Ask in) {
         Optional<String> oType = in.choice("Backup source type?", TYPE_CHOICES);
 
         if (oType.isEmpty())
@@ -59,12 +45,10 @@ public class BackupCreateCommand extends Command {
         if (oName.isEmpty())
             return CommandResult.error("No input");
 
-        // Not a yes/no question: the answer itself decides whether tags are printed. Empty input
-        // (or the scripted "null" placeholder) means "skip tags"; any other answer both opts in and
-        // supplies the label printed on them, which is deliberately a separate piece of text from
-        // the backup name above.
-        Optional<String> oTagName = in.string("Name for the container tags? (empty to skip printing tags)");
-        String tagName = (oTagName.isPresent() && !oTagName.get().equalsIgnoreCase("null")) ? oTagName.get() : null;
+        // Not a yes/no question: the answer itself decides whether tags are printed. An empty
+        // answer means "skip tags"; any other answer both opts in and supplies the label printed on
+        // them, which is deliberately a separate piece of text from the backup name above.
+        String tagName = in.string("Name for the container tags? (empty to skip printing tags)").orElse(null);
 
         if (!isKnownType(oType.get()))
             return CommandResult.error("Unknown type");
@@ -93,7 +77,7 @@ public class BackupCreateCommand extends Command {
      * Which splitter to use is the only thing that differs between a Shamir backup, a whole-secret
      * card and a reprint - everything downstream is the same pipeline.
      */
-    private Optional<SecretSplitter> askSplitter(ArgSource in, String type) {
+    private Optional<SecretSplitter> askSplitter(Ask in, String type) {
         // a hex payload is an existing share by definition, so it is always a reprint: asking
         // whether to split it further would produce a card that no longer matches its siblings
         if (type.equals("hex"))
@@ -120,7 +104,7 @@ public class BackupCreateCommand extends Command {
         return Optional.of(SecretSplitter.shamir(SplitScheme.of(oAllParts.get(), oForRecover.get())));
     }
 
-    private Optional<SecretSplitter> askReprintSplitter(ArgSource in) {
+    private Optional<SecretSplitter> askReprintSplitter(Ask in) {
         Optional<Integer> oShareIndex = in.integer("Which share is this card for?");
 
         if (oShareIndex.isEmpty())
@@ -144,10 +128,10 @@ public class BackupCreateCommand extends Command {
         return TYPE_CHOICES.stream().anyMatch(choice -> choice.value().equals(type));
     }
 
-    private Optional<SecretSource> askSource(ArgSource in, String type) {
+    private Optional<SecretSource> askSource(Ask in, String type) {
         return switch (type) {
-            case "file" -> in.existingFilePath("Path to file?").map(SecretSource::ofFile);
-            case "text" -> in.restOfLine("Enter text to backup:").map(SecretSource::ofText);
+            case "file" -> in.existingFile("Path to file?").map(SecretSource::ofFile);
+            case "text" -> in.string("Enter text to backup:").map(SecretSource::ofText);
             case "seed" -> in.words("Enter seed words separated by spaces:").map(SecretSource::ofSeed);
             case "hex" -> in.string("Enter the share's hex payload:").map(hex -> SecretSource.ofHex(hex.trim()));
             default -> Optional.empty();
@@ -204,11 +188,6 @@ public class BackupCreateCommand extends Command {
     public String description() {
         return "Print a file, text or seed phrase onto scannable backup cards - split into Shamir "
                 + "shares, whole on a single card, or reprinting a card for a share you already hold";
-    }
-
-    @Override
-    public String args() {
-        return "file|text|seed|hex <name> <tag_name|null> <split|single> [<all_parts> <parts_for_recover>] <source...>";
     }
 
     @Override

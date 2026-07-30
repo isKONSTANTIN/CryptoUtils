@@ -4,7 +4,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import su.knst.crypto.Main;
 import su.knst.crypto.command.CommandResult;
-import su.knst.crypto.command.ParamsContainer;
+import su.knst.crypto.cli.Ask;
+import su.knst.crypto.tests.cli.ScriptedQuestioner;
 import su.knst.crypto.command.commands.misc.ChangeDirectoryCommand;
 import su.knst.crypto.command.commands.misc.DeleteCommand;
 import su.knst.crypto.command.commands.misc.ExitCommand;
@@ -33,7 +34,7 @@ class MiscCommandsTest {
     void helpListsAllRegisteredCommands() {
         HelpCommand command = main.getHandler().getCommand(HelpCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer());
+        CommandResult result = command.run(ask());
 
         assertFalse(result.error());
 
@@ -47,10 +48,10 @@ class MiscCommandsTest {
     }
 
     @Test
-    void changeDirectoryWithNoArgIsVoid() {
+    void changeDirectoryWithNoAnswerIsVoid() {
         ChangeDirectoryCommand command = main.getHandler().getCommand(ChangeDirectoryCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer());
+        CommandResult result = command.run(ask());
 
         assertEquals(CommandResult.VOID, result);
     }
@@ -68,17 +69,17 @@ class MiscCommandsTest {
     void deleteMissingFileDoesNothing() {
         DeleteCommand command = main.getHandler().getCommand(DeleteCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer("this_file_does_not_exist_hopefully"));
+        // existingFile() re-asks until a real file is named, so a missing one just cancels
+        CommandResult result = command.run(ask("this_file_does_not_exist_hopefully"));
 
-        assertFalse(result.error());
-        assertEquals("File not exists", result.message());
+        assertTrue(result.error());
     }
 
     @Test
-    void deleteWithNoArgIsError() {
+    void deleteWithNoAnswerIsError() {
         DeleteCommand command = main.getHandler().getCommand(DeleteCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer());
+        CommandResult result = command.run(ask());
 
         assertTrue(result.error());
     }
@@ -87,8 +88,12 @@ class MiscCommandsTest {
     void exitCommandShutsDownWithoutError() {
         ExitCommand command = main.getHandler().getCommand(ExitCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer());
+        CommandResult result = command.run(ask());
 
         assertEquals(CommandResult.VOID, result);
+    }
+
+    static Ask ask(String... answers) {
+        return new Ask(new ScriptedQuestioner(answers));
     }
 }

@@ -9,8 +9,10 @@ import org.jline.reader.impl.completer.StringsCompleter;
 import org.jline.terminal.Terminal;
 import org.jline.terminal.TerminalBuilder;
 import org.jline.utils.AttributedStyle;
+import su.knst.crypto.cli.Questioner;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandHandler;
+import su.knst.crypto.command.LineCommand;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.Panel;
 import su.knst.crypto.utils.Banner;
@@ -24,7 +26,7 @@ import java.util.Optional;
 
 import static org.jline.builtins.Completers.TreeCompleter.node;
 
-public class TerminalWorker {
+public class TerminalWorker implements Questioner {
     protected Terminal terminal;
     protected PrintWriter writer;
 
@@ -34,13 +36,14 @@ public class TerminalWorker {
 
     public TerminalWorker(CommandHandler handler) {
         this.handler = handler;
+        handler.setQuestioner(this);
     }
 
     protected TreeCompleter createTree() {
         ArrayList<TreeCompleter.Node> nodes = new ArrayList<>();
 
         handler.getCommands().forEach((n, c) -> {
-            Optional<TreeCompleter.Node> commandNode = Optional.ofNullable(c.getArgsTree(n));
+            Optional<TreeCompleter.Node> commandNode = Optional.ofNullable(c.completerNode(n));
 
             nodes.add(commandNode.orElseGet(() -> node(n)));
         });
@@ -48,6 +51,7 @@ public class TerminalWorker {
         return new TreeCompleter(nodes);
     }
 
+    @Override
     public Optional<String> ask(TerminalQuestion question) {
         // no REPL running (e.g. a command invoked directly with no arguments, outside start()) -
         // there is no terminal to prompt on, so treat it the same as the user giving no answer
@@ -145,9 +149,8 @@ public class TerminalWorker {
 
     }
 
-    // Registered commands (other than the handful of inline-args exceptions like help/cd/exit)
-    // never receive typed-out arguments in the REPL anymore - typing a command name always drops
-    // straight into its own interactive question flow, any trailing words on the line are ignored.
+    // Typing a command name drops straight into its own question flow; the intro panel says so,
+    // except for the few commands that take their argument on the line and answer immediately.
     private CommandResult dispatch(String line) {
         String trimmed = line.strip();
 
@@ -157,12 +160,10 @@ public class TerminalWorker {
         String name = trimmed.split("\\s+", 2)[0];
         Command command = handler.getCommands().get(name);
 
-        if (command == null || command.supportsInlineArgs())
-            return handler.run(line);
+        if (command != null && !(command instanceof LineCommand))
+            printIntro(command, name);
 
-        printIntro(command, name);
-
-        return handler.run(name);
+        return handler.run(trimmed);
     }
 
     private void printIntro(Command command, String name) {

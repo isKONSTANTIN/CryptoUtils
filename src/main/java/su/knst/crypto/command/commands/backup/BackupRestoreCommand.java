@@ -1,13 +1,10 @@
 package su.knst.crypto.command.commands.backup;
 
 import su.knst.crypto.Main;
-import su.knst.crypto.command.ArgSource;
+import su.knst.crypto.cli.Ask;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
-import su.knst.crypto.command.InteractiveArgSource;
-import su.knst.crypto.command.ParamsContainer;
-import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.cli.format.SeedFormat;
 import su.knst.crypto.core.restore.RestoreException;
@@ -16,6 +13,7 @@ import su.knst.crypto.core.restore.RestoreRequest;
 import su.knst.crypto.core.restore.RestoreService;
 import su.knst.crypto.core.restore.ShareInput;
 import su.knst.crypto.core.secret.SecretSink;
+import su.knst.crypto.core.shamir.SplitScheme;
 import su.knst.crypto.utils.Prompts;
 
 import java.nio.file.Path;
@@ -36,15 +34,7 @@ public class BackupRestoreCommand extends Command {
     );
 
     @Override
-    public CommandResult run(ParamsContainer args) {
-        ArgSource in = args.size() == 0
-                ? new InteractiveArgSource(Main.getTerminalWorker())
-                : new ScriptedArgSource(args);
-
-        return resolve(in);
-    }
-
-    private CommandResult resolve(ArgSource in) {
+    public CommandResult run(Ask in) {
         Optional<String> oType = in.choice("Backup source type?", TYPE_CHOICES);
 
         if (oType.isEmpty())
@@ -72,7 +62,7 @@ public class BackupRestoreCommand extends Command {
         return restore(new RestoreRequest(oSink.get(), mode, oChunks.get()));
     }
 
-    private Optional<List<ShareInput>> askSingleChunk(ArgSource in) {
+    private Optional<List<ShareInput>> askSingleChunk(Ask in) {
         return in.stringWithFileCompletion("Card image path or hex string:")
                 .map(token -> List.of(toShareInput(token)));
     }
@@ -81,38 +71,34 @@ public class BackupRestoreCommand extends Command {
         return TYPE_CHOICES.stream().anyMatch(choice -> choice.value().equals(type));
     }
 
-    private Optional<SecretSink> askSink(ArgSource in, String type) {
+    private Optional<SecretSink> askSink(Ask in, String type) {
         return switch (type) {
-            case "file" -> in.newFilePath("Output path for the restored file?").map(SecretSink::toFile);
+            case "file" -> in.newFile("Output path for the restored file?").map(SecretSink::toFile);
             case "text" -> Optional.of(SecretSink.toText());
             case "seed" -> Optional.of(SecretSink.toSeed());
             default -> Optional.empty();
         };
     }
 
-    // Scripted mode has no separate "total" argument - the chunk list is however many positional
-    // tokens are left. Interactive mode has to ask for a count up front instead, since there's no
-    // natural end-of-input signal on a single prompt loop.
-    private Optional<List<ShareInput>> askChunks(ArgSource in) {
+    /**
+     * A share's number is its position in this list, so the count has to be asked for up front: a
+     * share the user no longer has still takes up its slot, and skipping it silently would shift
+     * every share after it onto the wrong number.
+     */
+    private Optional<List<ShareInput>> askChunks(Ask in) {
+        Optional<Integer> oTotal = in.integer("How many parts was the backup split into?",
+                2, SplitScheme.MAX_TOTAL);
+
+        if (oTotal.isEmpty())
+            return Optional.empty();
+
         List<ShareInput> chunks = new ArrayList<>();
 
-        if (in.interactive()) {
-            Optional<Integer> oTotal = in.integer("How many chunks were there in total?");
+        for (int i = 1; i <= oTotal.get(); i++) {
+            Optional<String> oToken =
+                    in.stringWithFileCompletion("Chunk #" + i + ": file path, hex string, or empty to skip:");
 
-            if (oTotal.isEmpty())
-                return Optional.empty();
-
-            for (int i = 1; i <= oTotal.get(); i++) {
-                Optional<String> oToken =
-                        in.stringWithFileCompletion("Chunk #" + i + ": file path, hex string, or empty to skip:");
-
-                chunks.add(oToken.map(BackupRestoreCommand::toShareInput).orElseGet(ShareInput.Skipped::new));
-            }
-        } else {
-            Optional<String> oToken;
-
-            while ((oToken = in.string(null)).isPresent())
-                chunks.add(toShareInput(oToken.get()));
+            chunks.add(oToken.map(BackupRestoreCommand::toShareInput).orElseGet(ShareInput.Skipped::new));
         }
 
         return Optional.of(chunks);
@@ -153,11 +139,6 @@ public class BackupRestoreCommand extends Command {
     public String description() {
         return "Reconstruct a file, text or seed phrase from backup cards - Shamir shares combined by "
                 + "their printed numbering, or a single unsplit card - read from QR codes or typed-in hex";
-    }
-
-    @Override
-    public String args() {
-        return "file <output_path> <shamir|whole> <chunk_1|null> ... | text <shamir|whole> ... | seed <shamir|whole> ...";
     }
 
     @Override

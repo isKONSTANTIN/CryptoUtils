@@ -1,7 +1,6 @@
 package su.knst.crypto;
 
 import su.knst.crypto.command.CommandHandler;
-import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.command.commands.backup.BackupCreateCommand;
 import su.knst.crypto.command.commands.backup.BackupRestoreCommand;
@@ -82,19 +81,23 @@ public class Main {
         }
     }
 
+    /**
+     * CryptoUtils is interactive: every command asks its own questions, so there is no argument
+     * grammar to invoke one with. Only --version is answered without starting the REPL.
+     */
     public static void main(String[] args) {
-        NativeAwtLibraries.extractAndRegister();
-
-        Main main = new Main();
-
-        if (args.length == 0) {
-            main.start();
+        if (args.length == 1 && (args[0].equals("--version") || args[0].equals("-v"))) {
+            System.out.println(getVersion());
             return;
         }
 
-        CommandResult result = main.getHandler().run(args);
+        if (args.length > 0) {
+            System.err.println("CryptoUtils is interactive - run it without arguments.");
+            System.exit(2);
+        }
 
-        System.out.println(result.message());
-        System.exit(result.error() ? 1 : 0);
+        NativeAwtLibraries.extractAndRegister();
+
+        new Main().start();
     }
 }

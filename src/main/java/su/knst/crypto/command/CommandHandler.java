@@ -1,5 +1,7 @@
 package su.knst.crypto.command;
 
+import su.knst.crypto.cli.Ask;
+import su.knst.crypto.cli.Questioner;
 import su.knst.crypto.command.commands.CommandTag;
 
 import java.io.IOException;
@@ -12,16 +14,27 @@ public class CommandHandler {
     protected final ArrayList<String> commandsNames = new ArrayList<>();
     protected final LinkedHashMap<CommandTag, ArrayList<String>> commandsNamesByTag = new LinkedHashMap<>();
 
-    public CommandResult run(String line) {
-        return run(line.split(" "));
+    protected Questioner questioner = question -> Optional.empty();
+
+    public void setQuestioner(Questioner questioner) {
+        this.questioner = questioner;
     }
 
-    public CommandResult run(String[] words) {
-        Command command = commands.get(words[0]);
+    public CommandResult run(String line) {
+        String trimmed = line.strip();
+
+        if (trimmed.isEmpty())
+            return CommandResult.VOID;
+
+        String[] parts = trimmed.split("\\s+", 2);
+        String name = parts[0];
+        String argument = parts.length > 1 ? parts[1] : null;
+
+        Command command = commands.get(name);
 
         if (command == null) {
             try {
-                runSystemCommand(words);
+                runSystemCommand(trimmed.split("\\s+"));
             } catch (IOException e) {
                 return CommandResult.COMMAND_NOT_FOUND;
             }
@@ -29,7 +42,16 @@ public class CommandHandler {
             return CommandResult.VOID;
         }
 
-        return command.run(new ParamsContainer(Arrays.copyOfRange(words, 1, words.length))).withTitle(words[0]);
+        Ask in = new Ask(questioner);
+
+        if (command instanceof LineCommand lineCommand)
+            return lineCommand.run(in, argument).withTitle(name);
+
+        CommandResult result = command.run(in).withTitle(name);
+
+        // typed-out arguments used to be dropped without a word here; commands ask their own
+        // questions now, so say so rather than leave the user wondering where the text went
+        return argument == null ? result : result.withNotice("ignored: " + argument);
     }
 
     public <T extends Command> void registerCommand(String alias, T command) {

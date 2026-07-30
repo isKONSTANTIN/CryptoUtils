@@ -1,14 +1,10 @@
 package su.knst.crypto.command.commands.seed;
 
-import su.knst.crypto.Main;
+import su.knst.crypto.cli.Ask;
 import su.knst.crypto.cli.format.SeedFormat;
-import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.CommandResultBuilder;
-import su.knst.crypto.command.InteractiveArgSource;
-import su.knst.crypto.command.ParamsContainer;
-import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.core.seed.SeedException;
 import su.knst.crypto.core.seed.SeedService;
@@ -43,11 +39,7 @@ public class SeedCommand extends Command {
     );
 
     @Override
-    public CommandResult run(ParamsContainer args) {
-        ArgSource in = args.size() == 0
-                ? new InteractiveArgSource(Main.getTerminalWorker())
-                : new ScriptedArgSource(args);
-
+    public CommandResult run(Ask in) {
         Optional<String> oMode = in.choice("What do you want to do with a seed phrase?", MODE_CHOICES);
 
         if (oMode.isEmpty())
@@ -69,7 +61,7 @@ public class SeedCommand extends Command {
         }
     }
 
-    private CommandResult fromBase64(ArgSource in) throws SeedException {
+    private CommandResult fromBase64(Ask in) throws SeedException {
         Optional<String> oBase64 = in.string("Base64 encoded entropy?");
 
         if (oBase64.isEmpty())
@@ -86,7 +78,7 @@ public class SeedCommand extends Command {
         return describe(entropy);
     }
 
-    private CommandResult fromHex(ArgSource in) throws SeedException {
+    private CommandResult fromHex(Ask in) throws SeedException {
         Optional<String> oHex = in.string("Hex encoded entropy?");
 
         if (oHex.isEmpty())
@@ -100,7 +92,7 @@ public class SeedCommand extends Command {
         return describe(HexUtils.hexStringToByteArray(hex));
     }
 
-    private CommandResult toEncoding(ArgSource in, boolean base64) throws SeedException {
+    private CommandResult toEncoding(Ask in, boolean base64) throws SeedException {
         Optional<String[]> oWords = in.words("Enter seed words separated by spaces:");
 
         if (oWords.isEmpty())
@@ -118,7 +110,7 @@ public class SeedCommand extends Command {
                 .build();
     }
 
-    private CommandResult extend(ArgSource in) throws SeedException {
+    private CommandResult extend(Ask in) throws SeedException {
         Optional<String[]> oWords = in.words("Enter 12 seed words separated by spaces:");
 
         if (oWords.isEmpty())
@@ -141,7 +133,7 @@ public class SeedCommand extends Command {
         return builder.merge(describe(extended)).build();
     }
 
-    private CommandResult wordlist(ArgSource in) {
+    private CommandResult wordlist(Ask in) {
         Optional<String> oMode = in.choice("List available wordlists, or set the active one?", WORDLIST_MODE_CHOICES);
 
         if (oMode.isEmpty())
@@ -176,11 +168,6 @@ public class SeedCommand extends Command {
     @Override
     public String description() {
         return "Generate, convert, extend and inspect BIP-39 seed phrases, and choose the active wordlist";
-    }
-
-    @Override
-    public String args() {
-        return "generate | from_base | from_hex | to_base | to_hex | extend | wordlist";
     }
 
     @Override

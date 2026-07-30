@@ -3,6 +3,7 @@ package su.knst.crypto.command;
 import org.jline.utils.AttributedStyle;
 import su.knst.crypto.utils.ConsoleBox;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class CommandResult extends Panel {
@@ -57,6 +58,14 @@ public class CommandResult extends Panel {
             return this;
 
         return new CommandResult(newTitle, framed, style, content, panels, error);
+    }
+
+    /** Appends a note about something the command did not act on, without changing the outcome. */
+    public CommandResult withNotice(String notice) {
+        List<Panel> withNotice = new ArrayList<>(panels);
+        withNotice.add(Panel.plain(notice));
+
+        return new CommandResult(title, framed, style, content, withNotice, error);
     }
 
     public String message() {

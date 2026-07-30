@@ -2,10 +2,11 @@ package su.knst.crypto.command.commands.misc;
 
 import org.jline.builtins.Completers;
 import org.jline.utils.AttributedStyle;
+import su.knst.crypto.cli.Ask;
 import su.knst.crypto.command.Command;
 import su.knst.crypto.command.CommandResult;
+import su.knst.crypto.command.LineCommand;
 import su.knst.crypto.command.Panel;
-import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.utils.ConsoleBox;
 import su.knst.crypto.utils.args.ArgsTreeBuilder;
@@ -15,14 +16,12 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class HelpCommand extends Command {
+public class HelpCommand extends LineCommand {
     private static final int WRAP_WIDTH = 80;
 
     @Override
-    public CommandResult run(ParamsContainer args) {
-        return args.stringV(0)
-                .map(this::runDetailed)
-                .orElseGet(this::runList);
+    public CommandResult run(Ask in, String argument) {
+        return argument == null ? runList() : runDetailed(argument.strip());
     }
 
     private CommandResult runList() {
@@ -68,9 +67,6 @@ public class HelpCommand extends Command {
         }
 
         String usage = String.join(", ", aliases);
-        String args = command.args();
-        if (args != null)
-            usage += " " + args;
 
         StringBuilder builder = new StringBuilder();
         builder.append(ConsoleBox.wrap(usage, WRAP_WIDTH, "")).append("\n\n");
@@ -119,17 +115,7 @@ public class HelpCommand extends Command {
     }
 
     @Override
-    public String args() {
-        return "[command]";
-    }
-
-    @Override
-    public boolean supportsInlineArgs() {
-        return true;
-    }
-
-    @Override
-    public Completers.TreeCompleter.Node getArgsTree(String alias) {
+    public Completers.TreeCompleter.Node completerNode(String alias) {
         return ArgsTreeBuilder.builder().addPossibleArg(alias)
                 .addPossibleArgs(handler.getCommandsNames())
                 .build();
