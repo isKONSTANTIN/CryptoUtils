@@ -13,9 +13,10 @@ import com.google.zxing.multi.GenericMultipleBarcodeReader;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import su.knst.crypto.utils.codes.ShareCardImage;
+import su.knst.crypto.core.render.PngWriter;
+import su.knst.crypto.core.render.PrintGeometry;
 import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
-import su.knst.crypto.utils.codes.TagImage;
+import su.knst.crypto.core.render.TagImage;
 
 import javax.imageio.ImageIO;
 import java.awt.Color;
@@ -121,7 +122,7 @@ class TagImageTest {
         BufferedImage image = TagImage.build(data("My Container", "ab12cd"));
         Path path = tempDir.resolve("tag.png");
 
-        ShareCardImage.writePng(image, path, 300, TagImage.RENDER_SCALE);
+        PngWriter.write(image, path);
 
         byte[] bytes = Files.readAllBytes(path);
         String content = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1);
@@ -138,6 +139,6 @@ class TagImageTest {
 
         // written at 300 DPI nominal, but the buffer is a 6x supersample, so the recorded density
         // must double too or the physical print size would come out twice as large
-        assertEquals(70866, pixelsPerUnitXAxis);
+        assertEquals(PrintGeometry.PIXELS_PER_METER, pixelsPerUnitXAxis);
     }
 }

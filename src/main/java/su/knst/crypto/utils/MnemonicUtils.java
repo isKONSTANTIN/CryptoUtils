@@ -1,6 +1,5 @@
 package su.knst.crypto.utils;
 
-import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.utils.exceptions.WrongMnemonicException;
 import su.knst.crypto.utils.worldlists.WordLists;
 

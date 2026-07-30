@@ -1,8 +1,5 @@
 package su.knst.crypto.command.commands.backup;
 
-import com.codahale.shamir.Scheme;
-import com.google.zxing.WriterException;
-import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
 import su.knst.crypto.Main;
 import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
@@ -12,28 +9,19 @@ import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
-import su.knst.crypto.utils.FileUtils;
-import su.knst.crypto.utils.HexUtils;
-import su.knst.crypto.utils.MnemonicUtils;
+import su.knst.crypto.core.backup.BackupException;
+import su.knst.crypto.core.backup.BackupRequest;
+import su.knst.crypto.core.backup.BackupResult;
+import su.knst.crypto.core.backup.BackupService;
+import su.knst.crypto.core.render.QrCodec;
+import su.knst.crypto.core.secret.SecretSource;
+import su.knst.crypto.core.shamir.SecretSplitter;
+import su.knst.crypto.core.shamir.SplitScheme;
 import su.knst.crypto.utils.Prompts;
-import su.knst.crypto.utils.codes.ShareCardImage;
-import su.knst.crypto.utils.codes.ShareCardRenderer;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner;
-import su.knst.crypto.utils.codes.SharePrintPageRenderer;
-import su.knst.crypto.utils.codes.TagImage;
-import su.knst.crypto.utils.exceptions.WrongMnemonicException;
 
-import java.awt.image.BufferedImage;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.time.LocalDate;
-import java.util.*;
-import java.util.zip.GZIPOutputStream;
+import java.util.List;
+import java.util.Optional;
 
 public class BackupCreateCommand extends Command {
     private static final List<Prompts.Choice> TYPE_CHOICES = List.of(
@@ -41,8 +29,6 @@ public class BackupCreateCommand extends Command {
             new Prompts.Choice("text", "Text", "Type the secret in directly"),
             new Prompts.Choice("seed", "Seed", "Split a BIP-39 mnemonic phrase")
     );
-    private static final int MAX_SPLIT_ATTEMPTS = 10;
-    private static final int PNG_DPI = 300;
 
     @Override
     public CommandResult run(ParamsContainer args) {
@@ -62,18 +48,15 @@ public class BackupCreateCommand extends Command {
         if (oType.isEmpty())
             return CommandResult.error("No input");
 
-        String type = oType.get();
-
         Optional<String> oName = in.string("Name for these backup copies?");
 
         if (oName.isEmpty())
             return CommandResult.error("No input");
 
         // Not a yes/no question: the answer itself decides whether tags are printed. Empty input
-        // (or the scripted "null" placeholder, same convention as ShamirCommand/
-        // BackupRestoreCommand's other optional positional slots) means "skip tags"; any other
-        // answer both opts in and supplies the label printed on them, which is deliberately a
-        // separate piece of text from the backup name above.
+        // (or the scripted "null" placeholder) means "skip tags"; any other answer both opts in and
+        // supplies the label printed on them, which is deliberately a separate piece of text from
+        // the backup name above.
         Optional<String> oTagName = in.string("Name for the container tags? (empty to skip printing tags)");
         String tagName = (oTagName.isPresent() && !oTagName.get().equalsIgnoreCase("null")) ? oTagName.get() : null;
 
@@ -87,305 +70,81 @@ public class BackupCreateCommand extends Command {
         if (oForRecover.isEmpty())
             return CommandResult.error("No input");
 
-        byte[] secret;
+        if (!isKnownType(oType.get()))
+            return CommandResult.error("Unknown type");
 
-        switch (type) {
-            case "file" -> {
-                Optional<Path> oPath = in.existingFilePath("Path to file?");
+        Optional<SecretSource> oSource = askSource(in, oType.get());
 
-                if (oPath.isEmpty())
-                    return CommandResult.error("No input");
+        if (oSource.isEmpty())
+            return CommandResult.error("No input");
 
-                try {
-                    secret = Files.readAllBytes(oPath.get());
-                } catch (IOException e) {
-                    return CommandResult.error("Failed to read source file: " + e.getMessage());
-                }
-            }
-            case "text" -> {
-                Optional<String> oText = in.restOfLine("Enter text to backup:");
+        SplitScheme scheme;
 
-                if (oText.isEmpty())
-                    return CommandResult.error("No input");
-
-                secret = oText.get().getBytes(StandardCharsets.UTF_8);
-            }
-            case "seed" -> {
-                Optional<String[]> oWords = in.words("Enter seed words separated by spaces:");
-
-                if (oWords.isEmpty())
-                    return CommandResult.error("No input");
-
-                String[] words = oWords.get();
-
-                try {
-                    MnemonicUtils.checkMnemonic(words);
-                } catch (WrongMnemonicException | NoSuchAlgorithmException e) {
-                    return CommandResult.error("Failed to check mnemonic: " + e.getMessage());
-                }
-
-                secret = MnemonicUtils.entropyFromMnemonic(words);
-            }
-            default -> {
-                return CommandResult.error("Unknown type");
-            }
+        try {
+            scheme = SplitScheme.of(oAllParts.get(), oForRecover.get());
+        } catch (IllegalArgumentException e) {
+            return CommandResult.error(e.getMessage());
         }
 
-        return finish(type, oName.get(), tagName, oAllParts.get(), oForRecover.get(), secret);
+        return create(new BackupRequest(oName.get(), tagName, SecretSplitter.shamir(scheme),
+                oSource.get(), Main.getCurrentPath()));
     }
 
-    private CommandResult finish(String type, String name, String tagName, int allParts, int forRecover, byte[] secret) {
-        if (secret.length == 0)
-            return CommandResult.error("Source data is empty");
+    private static boolean isKnownType(String type) {
+        return TYPE_CHOICES.stream().anyMatch(choice -> choice.value().equals(type));
+    }
+
+    private Optional<SecretSource> askSource(ArgSource in, String type) {
+        return switch (type) {
+            case "file" -> in.existingFilePath("Path to file?").map(SecretSource::ofFile);
+            case "text" -> in.restOfLine("Enter text to backup:").map(SecretSource::ofText);
+            case "seed" -> in.words("Enter seed words separated by spaces:").map(SecretSource::ofSeed);
+            default -> Optional.empty();
+        };
+    }
+
+    private CommandResult create(BackupRequest request) {
+        BackupResult result;
 
         try {
-            secret = gzip(secret);
-        } catch (IOException e) {
-            return CommandResult.error("Failed to compress source data: " + e.getMessage());
+            result = new BackupService().create(request);
+        } catch (BackupException e) {
+            return CommandResult.error(e.getMessage());
         }
 
-        String validationError = validateScheme(allParts, forRecover);
+        return format(result);
+    }
 
-        if (validationError != null)
-            return CommandResult.error(validationError);
-
-        String typeLabel = type.toUpperCase();
-        LocalDate createdOn = LocalDate.now();
-        Map<Integer, BufferedImage> images = null;
-        Map<Integer, String> finalChecksumByPart = null;
-        ErrorCorrectionLevel appliedLevel = null;
-        boolean appliedHasQr = true;
-
-        // Shamir split is randomized (a fresh polynomial every call), so on the rare chance a
-        // particular share's QR code doesn't come back readable (barcode detection isn't
-        // perfectly reliable for every possible bit pattern), redo the whole split with fresh
-        // randomness and try again rather than ever handing back an unrestorable backup.
-        for (int attempt = 0; attempt < MAX_SPLIT_ATTEMPTS && images == null; attempt++) {
-            Scheme scheme = new Scheme(new SecureRandom(), allParts, forRecover);
-            Map<Integer, byte[]> shares = scheme.split(secret);
-
-            Map<Integer, String> hexByPart = new LinkedHashMap<>();
-            Map<Integer, String> checksumByPart = new LinkedHashMap<>();
-
-            for (int i = 1; i <= allParts; i++) {
-                byte[] shareBytes = shares.get(i);
-                hexByPart.put(i, HexUtils.bytesToHex(shareBytes));
-
-                try {
-                    checksumByPart.put(i, HexUtils.hexHash(shareBytes).substring(0, 6).toLowerCase(Locale.ROOT));
-                } catch (NoSuchAlgorithmException e) {
-                    return CommandResult.error("Failed to compute checksum: " + e.getMessage());
-                }
-            }
-
-            // Start at the most error-correcting level and step down one notch at a time whenever
-            // any share is too large to fit a QR code at the current level.
-            Map<Integer, BufferedImage> candidate = null;
-            ErrorCorrectionLevel fittingLevel = null;
-            boolean decodeFailed = false;
-
-            for (ErrorCorrectionLevel level : ShareCardRenderer.ERROR_CORRECTION_LEVELS) {
-                candidate = new LinkedHashMap<>();
-                boolean levelFits = true;
-
-                for (int i = 1; i <= allParts; i++) {
-                    BufferedImage image;
-
-                    try {
-                        image = ShareCardImage.build(new ShareCardImage.ShareCardData(
-                                name, i, allParts, forRecover, createdOn, hexByPart.get(i), checksumByPart.get(i),
-                                typeLabel, level, true));
-                    } catch (WriterException e) {
-                        levelFits = false;
-                        break;
-                    }
-
-                    // a share that renders but doesn't decode back to its own hex isn't safe to
-                    // hand out: this is the flaky case the outer attempt loop exists for, so a
-                    // fresh split (not just a lower error-correction level) is the real fix
-                    if (!ShareCardRenderer.decodesTo(image, hexByPart.get(i))) {
-                        levelFits = false;
-                        decodeFailed = true;
-                        break;
-                    }
-
-                    candidate.put(i, image);
-                }
-
-                if (levelFits) {
-                    fittingLevel = level;
-                    break;
-                }
-
-                candidate = null;
-            }
-
-            if (candidate == null && decodeFailed)
-                continue;
-
-            if (candidate == null) {
-                // no error-correction level was low enough: fall back to QR-less cards (the hex
-                // block is still the authoritative fallback path) rather than failing the backup
-                candidate = new LinkedHashMap<>();
-                ErrorCorrectionLevel lowestLevel = ShareCardRenderer.ERROR_CORRECTION_LEVELS[ShareCardRenderer.ERROR_CORRECTION_LEVELS.length - 1];
-
-                for (int i = 1; i <= allParts; i++) {
-                    try {
-                        candidate.put(i, ShareCardImage.build(new ShareCardImage.ShareCardData(
-                                name, i, allParts, forRecover, createdOn, hexByPart.get(i), checksumByPart.get(i),
-                                typeLabel, lowestLevel, false)));
-                    } catch (WriterException e2) {
-                        return CommandResult.error("Chunk " + i + " failed to render: " + e2.getMessage());
-                    }
-                }
-
-                fittingLevel = lowestLevel;
-                appliedHasQr = false;
-            }
-
-            images = candidate;
-            finalChecksumByPart = checksumByPart;
-            appliedLevel = fittingLevel;
-        }
-
-        if (images == null)
-            return CommandResult.error("Failed to produce reliably readable QR codes after " + MAX_SPLIT_ATTEMPTS + " attempts");
-
-        List<Path> written = new ArrayList<>();
-
-        try {
-            for (Map.Entry<Integer, BufferedImage> entry : images.entrySet()) {
-                Path path = Main.getCurrentPath().resolve(name + "_" + entry.getKey() + ".png");
-
-                FileUtils.createOwnerOnly(path);
-                ShareCardImage.writePng(entry.getValue(), path, PNG_DPI);
-
-                written.add(path);
-            }
-        } catch (IOException e) {
-            return CommandResult.error("Failed to write chunk files: " + e.getMessage());
-        }
-
-        boolean includeTags = tagName != null;
-        Map<Integer, BufferedImage> tagImages = new LinkedHashMap<>();
-        List<Path> writtenTags = new ArrayList<>();
-
-        if (includeTags) {
-            try {
-                for (int i = 1; i <= allParts; i++) {
-                    BufferedImage tagImage;
-
-                    try {
-                        tagImage = TagImage.build(new TagImage.TagData(
-                                tagName, i, allParts, finalChecksumByPart.get(i)));
-                    } catch (WriterException e) {
-                        return CommandResult.error("Tag " + i + " failed to render: " + e.getMessage());
-                    }
-
-                    Path path = Main.getCurrentPath().resolve(name + "_tag_" + i + ".png");
-
-                    FileUtils.createOwnerOnly(path);
-                    ShareCardImage.writePng(tagImage, path, PNG_DPI, TagImage.RENDER_SCALE);
-
-                    tagImages.put(i, tagImage);
-                    writtenTags.add(path);
-                }
-            } catch (IOException e) {
-                return CommandResult.error("Failed to write tag files: " + e.getMessage());
-            }
-        }
-
-        // Cards and tags are interleaved per share (card1, tag1, card2, tag2, ...) rather than
-        // grouped, so a share's card and tag stay physically adjacent on the printed sheet.
-        List<BufferedImage> orderedImages = new ArrayList<>();
-
-        for (int i = 1; i <= allParts; i++) {
-            orderedImages.add(images.get(i));
-
-            if (includeTags)
-                orderedImages.add(tagImages.get(i));
-        }
-
-        List<Path> writtenPrintPages = new ArrayList<>();
-        String printFailure = null;
-
-        try {
-            int cardWidthPx = orderedImages.get(0).getWidth();
-
-            List<SharePrintLayoutPlanner.PrintPage> printPlan = SharePrintLayoutPlanner.plan(
-                    orderedImages, SharePrintLayoutPlanner.PageConfig.a4FittingCardWidth(cardWidthPx));
-
-            List<BufferedImage> printPages = SharePrintPageRenderer.render(printPlan);
-
-            for (int i = 0; i < printPages.size(); i++) {
-                Path path = Main.getCurrentPath().resolve(name + "_print_" + (i + 1) + ".png");
-
-                FileUtils.createOwnerOnly(path);
-                ShareCardImage.writePng(printPages.get(i), path, PNG_DPI);
-
-                writtenPrintPages.add(path);
-            }
-        } catch (SharePrintLayoutPlanner.ImageTooLargeException | IOException e) {
-            // per-share PNGs are already written and are the authoritative backup; print sheets
-            // are a convenience feature only and must never fail the whole command. A layout
-            // failure (one share too large to print) rolls back to no print sheets at all rather
-            // than a partial set.
-            writtenPrintPages = List.of();
-            printFailure = e.getMessage();
-        }
-
+    private static CommandResult format(BackupResult result) {
         CommandResultBuilder builder = CommandResultBuilder.builder();
 
-        builder.line("Backup created: " + allParts + " parts, " + forRecover + " required to recover")
-                .line("Type: " + typeLabel)
-                .line(appliedHasQr
-                        ? "QR error correction level: " + ShareCardRenderer.describeLevel(appliedLevel)
+        builder.line("Backup created: " + result.scheme().total() + " parts, "
+                        + result.scheme().threshold() + " required to recover")
+                .line("Type: " + result.type().label())
+                .line(result.hasQr()
+                        ? "QR error correction level: " + QrCodec.describeLevel(result.appliedLevel())
                         : "QR code: none (share too large at every error correction level, hex block only)");
 
-        for (Path path : written)
-            builder.line(path.getFileName().toString());
+        appendFiles(builder, null, result.cardFiles());
+        appendFiles(builder, "\nHex fallback:", result.hexFiles());
+        appendFiles(builder, "\nTags:", result.tagFiles());
+        appendFiles(builder, "\nPrint sheets:", result.sheetFiles());
 
-        if (!writtenTags.isEmpty()) {
-            builder.line("\nTags:");
-
-            for (Path path : writtenTags)
-                builder.line(path.getFileName().toString());
-        }
-
-        if (!writtenPrintPages.isEmpty()) {
-            builder.line("\nPrint sheets:");
-
-            for (Path path : writtenPrintPages)
-                builder.line(path.getFileName().toString());
-        }
-
-        if (printFailure != null)
-            builder.line("Warning: failed to generate print sheets: " + printFailure);
+        result.sheetFailure().ifPresent(
+                reason -> builder.line("Warning: failed to generate print sheets: " + reason));
 
         return builder.build();
     }
 
-    private static String validateScheme(int allParts, int forRecover) {
-        if (forRecover < 2)
-            return "Parts for recover must be >= 2";
+    private static void appendFiles(CommandResultBuilder builder, String header, List<Path> files) {
+        if (files.isEmpty())
+            return;
 
-        if (allParts < forRecover)
-            return "All parts must be >= parts for recover";
+        if (header != null)
+            builder.line(header);
 
-        if (allParts > 255)
-            return "All parts must be <= 255";
-
-        return null;
-    }
-
-    private static byte[] gzip(byte[] data) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-
-        try (GZIPOutputStream gzip = new GZIPOutputStream(baos)) {
-            gzip.write(data);
-        }
-
-        return baos.toByteArray();
+        for (Path path : files)
+            builder.line(path.getFileName().toString());
     }
 
     @Override

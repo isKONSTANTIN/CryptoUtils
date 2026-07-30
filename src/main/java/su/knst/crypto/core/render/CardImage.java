@@ -1,4 +1,4 @@
-package su.knst.crypto.utils.codes;
+package su.knst.crypto.core.render;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -6,43 +6,28 @@ import com.google.zxing.MultiFormatWriter;
 import com.google.zxing.WriterException;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
 import com.google.zxing.common.BitMatrix;
-import com.google.zxing.qrcode.QRCodeWriter;
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel;
-import com.google.zxing.qrcode.encoder.ByteMatrix;
-import com.google.zxing.qrcode.encoder.Encoder;
-import com.google.zxing.qrcode.encoder.QRCode;
 
-import javax.imageio.IIOImage;
-import javax.imageio.ImageIO;
-import javax.imageio.ImageTypeSpecifier;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.metadata.IIOMetadata;
-import javax.imageio.metadata.IIOMetadataNode;
-import javax.imageio.stream.ImageOutputStream;
 import java.awt.*;
 import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.nio.file.Path;
+
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static java.awt.image.BufferedImage.TYPE_BYTE_BINARY;
-
 /**
  * Renders one Shamir secret-sharing share as a printable "backup card" PNG: a header, a
  * share/threshold/date metadata row, a QR code, a formatted hex dump of the share bytes, a
  * checksum row, a blank notes line and a footer, all inside a dashed cut/fold border.
  *
- * The card is sized to 496px wide, which is exactly 42mm (1/5 of an A4 sheet's 210mm width) at
- * 300 DPI, so a PDF layout stage can later tile cards on a page without any rescaling. Height is
- * not fixed: it grows with the number of wrapped hex lines, which depends on share size.
+ * The card is 496 logical px wide, which {@link PrintGeometry} prints as 56mm - narrow enough that
+ * three fit across an A4 sheet, wide enough that the 9pt hex fallback stays readable by eye. Height
+ * is not fixed: it grows with the number of wrapped hex lines, which depends on share size.
  */
-public final class ShareCardImage {
+public final class CardImage {
     // The whole card is laid out in "logical" pixels (design px @ 300 DPI, see class doc), then
     // rendered into a canvas RENDER_SCALE times larger and scaled up via the Graphics2D transform.
     // Vector content (text, lines, fills) simply gets rasterized with more samples this way, which
@@ -51,7 +36,7 @@ public final class ShareCardImage {
     // scaled transform would blur its hard edges instead of sharpening them.
     static final int RENDER_SCALE = 2;
 
-    private static final int CARD_WIDTH = 496;
+    static final int CARD_WIDTH = 496;
     private static final int PADDING_TOP = 16;
     private static final int PADDING_SIDE = 20;
     private static final int PADDING_BOTTOM = 18;
@@ -99,7 +84,7 @@ public final class ShareCardImage {
     ) {
     }
 
-    private ShareCardImage() {
+    private CardImage() {
     }
 
     public static BufferedImage build(ShareCardData data) throws WriterException {
@@ -160,54 +145,10 @@ public final class ShareCardImage {
         return canvas;
     }
 
-    public static void writePng(BufferedImage image, Path path, int dpi) throws IOException {
-        writePng(image, path, dpi, RENDER_SCALE);
-    }
-
-    // renderScale is explicit (rather than always reading ShareCardImage.RENDER_SCALE) so other
-    // renderers (e.g. TagImage) that supersample at the same factor for the same crispness reasons
-    // can reuse this writer without an implicit, easy-to-silently-break coupling to this class's
-    // own private rendering constant.
-    public static void writePng(BufferedImage image, Path path, int dpi, int renderScale) throws IOException {
-        ImageWriter writer = ImageIO.getImageWritersByFormatName("png").next();
-        ImageWriteParam writeParam = writer.getDefaultWriteParam();
-
-        ImageTypeSpecifier typeSpecifier = ImageTypeSpecifier.createFromBufferedImageType(image.getType());
-        IIOMetadata metadata = writer.getDefaultImageMetadata(typeSpecifier, writeParam);
-
-        String formatName = metadata.getNativeMetadataFormatName();
-        IIOMetadataNode root = new IIOMetadataNode(formatName);
-
-        IIOMetadataNode pHYs = new IIOMetadataNode("pHYs");
-        // the caller passes the nominal design DPI (e.g. 300 for a 42mm card); the actual pixel
-        // buffer is renderScale times denser than that design grid, so the DPI recorded in the
-        // file must scale with it too or the physical print size would double.
-        int pixelsPerMeter = (int) Math.round((dpi * (double) renderScale) / 0.0254);
-        pHYs.setAttribute("pixelsPerUnitXAxis", Integer.toString(pixelsPerMeter));
-        pHYs.setAttribute("pixelsPerUnitYAxis", Integer.toString(pixelsPerMeter));
-        pHYs.setAttribute("unitSpecifier", "meter");
-        root.appendChild(pHYs);
-
-        metadata.mergeTree(formatName, root);
-
-        try (ImageOutputStream ios = ImageIO.createImageOutputStream(path.toFile())) {
-            writer.setOutput(ios);
-            writer.write(null, new IIOImage(image, null, metadata), writeParam);
-        } finally {
-            writer.dispose();
-        }
-    }
-
     // ---- QR ----------------------------------------------------------------------------------
 
     private static BufferedImage buildQrImage(String hexPayload, ErrorCorrectionLevel level) throws WriterException {
-        BitMatrix matrix = new MultiFormatWriter().encode(
-                hexPayload,
-                BarcodeFormat.QR_CODE,
-                256 * RENDER_SCALE,
-                256 * RENDER_SCALE,
-                Map.of(EncodeHintType.ERROR_CORRECTION, level, EncodeHintType.MARGIN, 0)
-        );
+        BitMatrix matrix = QrCodec.encode(hexPayload, level, 300 * RENDER_SCALE, 0);
 
         return MatrixToImageWriter.toBufferedImage(matrix);
     }

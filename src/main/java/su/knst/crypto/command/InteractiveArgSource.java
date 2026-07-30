@@ -53,11 +53,6 @@ public class InteractiveArgSource implements ArgSource {
     }
 
     @Override
-    public Optional<Path> directory(String prompt) {
-        return Prompts.askDirectory(tw, prompt);
-    }
-
-    @Override
     public Optional<String[]> words(String prompt) {
         return Prompts.askWords(tw, prompt);
     }

@@ -98,16 +98,6 @@ public final class Prompts {
         return Optional.of(Main.getCurrentPath().resolve(answer.get().trim()));
     }
 
-    public static Optional<Path> askDirectory(TerminalWorker tw, String question) {
-        Completer completer = new Completers.DirectoriesCompleter(Main::getCurrentPath);
-
-        Optional<String> answer = tw.ask(new TerminalQuestion(question, null, completer));
-
-        if (answer.isEmpty() || answer.get().isBlank())
-            return Optional.empty();
-
-        return Optional.of(Main.getCurrentPath().resolve(answer.get().trim()));
-    }
 
     // Free-text words separated by spaces (mnemonic phrases), with completion against the
     // active wordlist for the word currently being typed.

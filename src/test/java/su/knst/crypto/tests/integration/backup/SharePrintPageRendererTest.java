@@ -1,10 +1,10 @@
 package su.knst.crypto.tests.integration.backup;
 
 import org.junit.jupiter.api.Test;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.Orientation;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PlacedImage;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PrintPage;
-import su.knst.crypto.utils.codes.SharePrintPageRenderer;
+import su.knst.crypto.core.render.PrintLayoutPlanner.Orientation;
+import su.knst.crypto.core.render.PrintLayoutPlanner.PlacedImage;
+import su.knst.crypto.core.render.PrintLayoutPlanner.PrintPage;
+import su.knst.crypto.core.render.PrintPageRenderer;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
@@ -31,7 +31,7 @@ class SharePrintPageRendererTest {
         PrintPage page1 = new PrintPage(Orientation.LANDSCAPE, 200, 300, List.of(new PlacedImage(red, 0, 0)));
         PrintPage page2 = new PrintPage(Orientation.PORTRAIT, 200, 300, List.of(new PlacedImage(blue, 0, 0)));
 
-        List<BufferedImage> rendered = SharePrintPageRenderer.render(List.of(page1, page2));
+        List<BufferedImage> rendered = PrintPageRenderer.render(List.of(page1, page2));
 
         assertEquals(2, rendered.size());
         assertEquals(200, rendered.get(0).getWidth());
@@ -44,7 +44,7 @@ class SharePrintPageRendererTest {
 
         PrintPage page = new PrintPage(Orientation.LANDSCAPE, 100, 100, List.of(new PlacedImage(card, 30, 40)));
 
-        BufferedImage result = SharePrintPageRenderer.render(List.of(page)).get(0);
+        BufferedImage result = PrintPageRenderer.render(List.of(page)).get(0);
 
         assertEquals(Color.RED.getRGB(), result.getRGB(30, 40));
         assertEquals(Color.RED.getRGB(), result.getRGB(49, 49));
@@ -61,7 +61,7 @@ class SharePrintPageRendererTest {
                 new PlacedImage(red, 0, 0),
                 new PlacedImage(blue, 20, 0)));
 
-        BufferedImage result = SharePrintPageRenderer.render(List.of(page)).get(0);
+        BufferedImage result = PrintPageRenderer.render(List.of(page)).get(0);
 
         assertEquals(Color.RED.getRGB(), result.getRGB(5, 5));
         assertEquals(Color.BLUE.getRGB(), result.getRGB(25, 5));

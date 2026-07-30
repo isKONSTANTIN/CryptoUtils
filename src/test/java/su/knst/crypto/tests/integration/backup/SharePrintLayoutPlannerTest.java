@@ -1,12 +1,12 @@
 package su.knst.crypto.tests.integration.backup;
 
 import org.junit.jupiter.api.Test;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.ImageTooLargeException;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.Orientation;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PageConfig;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PlacedImage;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PrintPage;
+import su.knst.crypto.core.render.PrintLayoutPlanner;
+import su.knst.crypto.core.render.PrintLayoutPlanner.ImageTooLargeException;
+import su.knst.crypto.core.render.PrintLayoutPlanner.Orientation;
+import su.knst.crypto.core.render.PrintLayoutPlanner.PageConfig;
+import su.knst.crypto.core.render.PrintLayoutPlanner.PlacedImage;
+import su.knst.crypto.core.render.PrintLayoutPlanner.PrintPage;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -34,7 +34,7 @@ class SharePrintLayoutPlannerTest {
     }
 
     private static List<PrintPage> plan(List<BufferedImage> images) throws ImageTooLargeException {
-        return SharePrintLayoutPlanner.plan(images, TEST_CONFIG);
+        return PrintLayoutPlanner.plan(images, TEST_CONFIG);
     }
 
     private static int totalItems(List<PrintPage> pages) {
@@ -217,7 +217,7 @@ class SharePrintLayoutPlannerTest {
         assertEquals(3720, a4.portraitWidthPx());
         assertEquals(5261, a4.landscapeWidthPx());
 
-        List<PrintPage> plan = SharePrintLayoutPlanner.plan(
+        List<PrintPage> plan = PrintLayoutPlanner.plan(
                 List.of(image(992, 1200), image(992, 1200)), a4);
 
         assertEquals(1, plan.size());

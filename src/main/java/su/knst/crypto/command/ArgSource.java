@@ -31,8 +31,6 @@ public interface ArgSource {
 
     Optional<Path> newFilePath(String prompt);
 
-    Optional<Path> directory(String prompt);
-
     // Consumes every remaining token as individual words (e.g. a mnemonic phrase).
     Optional<String[]> words(String prompt);
 

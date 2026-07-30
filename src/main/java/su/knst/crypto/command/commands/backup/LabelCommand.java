@@ -10,9 +10,8 @@ import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
-import su.knst.crypto.utils.FileUtils;
-import su.knst.crypto.utils.codes.ShareCardImage;
-import su.knst.crypto.utils.codes.TagImage;
+import su.knst.crypto.core.render.PngWriter;
+import su.knst.crypto.core.render.TagImage;
 
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -22,7 +21,6 @@ import java.util.Optional;
 // Renders a single container tag (see TagImage) purely from text, without being tied to a
 // Shamir backup - the barcode/checksum text is whatever the caller supplies as-is.
 public class LabelCommand extends Command {
-    private static final int PNG_DPI = 300;
 
     @Override
     public CommandResult run(ParamsContainer args) {
@@ -69,8 +67,7 @@ public class LabelCommand extends Command {
         Path path = Main.getCurrentPath().resolve(tagName + "_tag_" + shareIndex + ".png");
 
         try {
-            FileUtils.createOwnerOnly(path);
-            ShareCardImage.writePng(image, path, PNG_DPI, TagImage.RENDER_SCALE);
+            PngWriter.writeOwnerOnly(image, path);
         } catch (IOException e) {
             return CommandResult.error("Failed to write label file: " + e.getMessage());
         }

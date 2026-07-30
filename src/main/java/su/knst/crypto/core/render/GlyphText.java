@@ -1,4 +1,4 @@
-package su.knst.crypto.utils.codes;
+package su.knst.crypto.core.render;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
@@ -13,7 +13,7 @@ import java.io.UncheckedIOException;
 
 /**
  * Shared TrueTypeFont-based text rendering helpers and the palette/dash style used by both
- * {@link ShareCardImage} and {@link TagImage}, so the two printable artifact types share one
+ * {@link CardImage} and {@link TagImage}, so the two printable artifact types share one
  * visual family without duplicating the glyph-layout math twice.
  */
 public final class GlyphText {

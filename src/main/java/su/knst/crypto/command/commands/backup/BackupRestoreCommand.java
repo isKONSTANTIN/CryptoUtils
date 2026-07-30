@@ -1,6 +1,5 @@
 package su.knst.crypto.command.commands.backup;
 
-import com.codahale.shamir.Scheme;
 import su.knst.crypto.Main;
 import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
@@ -11,23 +10,18 @@ import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.command.commands.seed.SeedGeneratorCommand;
-import su.knst.crypto.utils.FileUtils;
-import su.knst.crypto.utils.HexUtils;
-import su.knst.crypto.utils.MnemonicUtils;
+import su.knst.crypto.core.restore.RestoreException;
+import su.knst.crypto.core.restore.RestoreMode;
+import su.knst.crypto.core.restore.RestoreRequest;
+import su.knst.crypto.core.restore.RestoreService;
+import su.knst.crypto.core.restore.ShareInput;
+import su.knst.crypto.core.secret.SecretSink;
 import su.knst.crypto.utils.Prompts;
-import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.zip.GZIPInputStream;
 
 public class BackupRestoreCommand extends Command {
     private static final List<Prompts.Choice> TYPE_CHOICES = List.of(
@@ -51,142 +45,89 @@ public class BackupRestoreCommand extends Command {
         if (oType.isEmpty())
             return CommandResult.error("No input");
 
-        String type = oType.get();
-        String outputPath = null;
+        Optional<SecretSink> oSink = askSink(in, oType.get());
 
-        if (type.equals("file")) {
-            Optional<Path> oOutput = in.newFilePath("Output path for the restored file?");
+        if (oSink.isEmpty())
+            return CommandResult.error(isKnownType(oType.get()) ? "No input" : "Unknown type");
 
-            if (oOutput.isEmpty())
-                return CommandResult.error("No input");
+        Optional<List<ShareInput>> oChunks = askChunks(in);
 
-            outputPath = oOutput.get().toString();
-        }
+        if (oChunks.isEmpty())
+            return CommandResult.error("No input");
 
-        Map<Integer, byte[]> parts = new HashMap<>();
+        return restore(new RestoreRequest(oSink.get(), RestoreMode.SHAMIR, oChunks.get()));
+    }
 
-        // Scripted mode has no separate "total" argument - the chunk list is however many
-        // positional tokens are left. Interactive mode has to ask for a count up front instead,
-        // since there's no natural end-of-input signal on a single prompt loop.
+    private static boolean isKnownType(String type) {
+        return TYPE_CHOICES.stream().anyMatch(choice -> choice.value().equals(type));
+    }
+
+    private Optional<SecretSink> askSink(ArgSource in, String type) {
+        return switch (type) {
+            case "file" -> in.newFilePath("Output path for the restored file?").map(SecretSink::toFile);
+            case "text" -> Optional.of(SecretSink.toText());
+            case "seed" -> Optional.of(SecretSink.toSeed());
+            default -> Optional.empty();
+        };
+    }
+
+    // Scripted mode has no separate "total" argument - the chunk list is however many positional
+    // tokens are left. Interactive mode has to ask for a count up front instead, since there's no
+    // natural end-of-input signal on a single prompt loop.
+    private Optional<List<ShareInput>> askChunks(ArgSource in) {
+        List<ShareInput> chunks = new ArrayList<>();
+
         if (in.interactive()) {
             Optional<Integer> oTotal = in.integer("How many chunks were there in total?");
 
             if (oTotal.isEmpty())
-                return CommandResult.error("No input");
+                return Optional.empty();
 
             for (int i = 1; i <= oTotal.get(); i++) {
-                Optional<String> oToken = in.stringWithFileCompletion("Chunk #" + i + ": file path, hex string, or empty to skip:");
+                Optional<String> oToken =
+                        in.stringWithFileCompletion("Chunk #" + i + ": file path, hex string, or empty to skip:");
 
-                if (oToken.isEmpty())
-                    continue;
-
-                CommandResult error = resolveChunk(i, oToken.get(), parts);
-
-                if (error != null)
-                    return error;
+                chunks.add(oToken.map(BackupRestoreCommand::toShareInput).orElseGet(ShareInput.Skipped::new));
             }
         } else {
-            int chunkIndex = 0;
             Optional<String> oToken;
 
-            while ((oToken = in.string(null)).isPresent()) {
-                chunkIndex++;
-                String token = oToken.get();
-
-                if (token.equalsIgnoreCase("null"))
-                    continue;
-
-                CommandResult error = resolveChunk(chunkIndex, token, parts);
-
-                if (error != null)
-                    return error;
-            }
+            while ((oToken = in.string(null)).isPresent())
+                chunks.add(toShareInput(oToken.get()));
         }
 
-        if (parts.isEmpty())
-            return CommandResult.error("No chunks provided");
-
-        return finish(type, outputPath, parts);
+        return Optional.of(chunks);
     }
 
-    // resolves one chunk token (file path or raw hex) into `parts`, returning a
-    // CommandResult.error(...) if it fails, or null on success
-    private static CommandResult resolveChunk(int chunkIndex, String token, Map<Integer, byte[]> parts) {
-        String hex;
+    /** A token naming an existing file is a card to scan; anything else is hex read off one by eye. */
+    private static ShareInput toShareInput(String token) {
+        if (token.equalsIgnoreCase("null"))
+            return new ShareInput.Skipped();
 
         Path path = Main.getCurrentPath().resolve(token);
 
-        if (path.toFile().isFile()) {
-            try {
-                hex = new SimpleQRCodeWorker().readCode(path.toString());
-            } catch (Exception e) {
-                return CommandResult.error("Chunk " + chunkIndex + ": failed to read QR code: " + e.getMessage());
-            }
-
-            if (hex == null)
-                return CommandResult.error("Chunk " + chunkIndex + ": QR code not found in image");
-        } else {
-            hex = token;
-        }
-
-        if (!HexUtils.isValidHex(hex))
-            return CommandResult.error("Chunk " + chunkIndex + ": invalid hex string");
-
-        parts.put(chunkIndex, HexUtils.hexStringToByteArray(hex));
-
-        return null;
+        return path.toFile().isFile() ? new ShareInput.FromFile(path) : new ShareInput.FromHex(token);
     }
 
-    private CommandResult finish(String type, String outputPath, Map<Integer, byte[]> parts) {
-        byte[] secret;
+    private CommandResult restore(RestoreRequest request) {
+        SecretSink.Written written;
 
         try {
-            // the scheme's own n/k are only used by its constructor's validation (k > 1, n >= k) -
-            // join() reconstructs purely from the given parts map, so these values don't need to
-            // match the original split's n/k, just be valid
-            Scheme scheme = new Scheme(new SecureRandom(), Math.max(2, parts.size()), 2);
-            secret = scheme.join(parts);
-        } catch (IllegalArgumentException e) {
-            return CommandResult.error("Failed to reconstruct secret: " + e.getMessage());
+            written = new RestoreService().restore(request);
+        } catch (RestoreException e) {
+            return CommandResult.error(e.getMessage());
         }
 
-        try (GZIPInputStream gzip = new GZIPInputStream(new ByteArrayInputStream(secret))) {
-            secret = gzip.readAllBytes();
-        } catch (IOException e) {
-            return CommandResult.error("Failed to decompress recovered data: " + e.getMessage());
-        }
+        if (written.file() != null)
+            return CommandResult.of("Restored file written to " + written.file());
 
-        switch (type) {
-            case "file" -> {
-                try {
-                    FileUtils.writeOwnerOnly(Main.getCurrentPath().resolve(outputPath), secret);
-                } catch (IOException e) {
-                    return CommandResult.error("Failed to write output file: " + e.getMessage());
-                }
+        if (written.words() != null)
+            return CommandResultBuilder.builder()
+                    .line("Recovered seed:")
+                    .line(SeedGeneratorCommand.formatMnemonic(written.words()))
+                    .build();
 
-                return CommandResult.of("Restored file written to " + outputPath);
-            }
-            case "text" -> {
-                return CommandResult.of(new String(secret, StandardCharsets.UTF_8));
-            }
-            case "seed" -> {
-                String[] words;
-
-                try {
-                    words = MnemonicUtils.createMnemonic(secret);
-                } catch (NoSuchAlgorithmException | RuntimeException e) {
-                    return CommandResult.error("Failed to build mnemonic: " + e.getMessage());
-                }
-
-                return CommandResultBuilder.builder()
-                        .line("Recovered seed:")
-                        .line(SeedGeneratorCommand.formatMnemonic(words))
-                        .build();
-            }
-            default -> {
-                return CommandResult.error("Unknown type");
-            }
-        }
+        return CommandResult.of(written.text());
     }
 
     @Override

@@ -1,4 +1,4 @@
-package su.knst.crypto.utils.codes;
+package su.knst.crypto.core.render;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ import java.util.List;
  * Decides how to tile a list of arbitrary-sized images (backup share cards, container tags, or
  * anything else) onto as few A4 sheets as possible for printing. Reads each image's own pixel
  * dimensions - callers don't need to extract them - and returns full pages, each carrying its own
- * placed images, ready to be rendered by {@link SharePrintPageRenderer}.
+ * placed images, ready to be rendered by {@link PrintPageRenderer}.
  *
  * Items are always drawn upright (never rotated); instead the SHEET orientation is chosen per
  * item. A landscape A4 sheet (297mm wide, 210mm tall) is preferred by default. An item that
@@ -27,8 +27,8 @@ import java.util.List;
  * different image sizes. Only when no open shelf fits does a new shelf open below the last one, or
  * a new page if the page is out of vertical room too.
  */
-public final class SharePrintLayoutPlanner {
-    private SharePrintLayoutPlanner() {
+public final class PrintLayoutPlanner {
+    private PrintLayoutPlanner() {
     }
 
     public enum Orientation {
@@ -42,17 +42,10 @@ public final class SharePrintLayoutPlanner {
     }
 
     public record PageConfig(int portraitWidthPx, int portraitHeightPx) {
-        // Deriving page size from a flat DPI would assume every input image's raw pixels are
-        // exactly that dense, but ShareCardImage/TagImage supersample their canvases (RENDER_SCALE
-        // 2x/6x) for crisper text/lines, so their actual raw pixel density is well above the
-        // nominal "300 DPI" written into the PNG metadata. Anchoring the page size to a share
-        // card's own already-rendered pixel width instead keeps card pixels and page pixels in the
-        // same scale regardless of supersampling, without needing to know any DPI at all.
-        //
-        // The card's true design width is 42mm (see ShareCardImage), but it's deliberately treated
-        // here as if it were 56mm: that shrinks the computed page pixel dimensions relative to the
-        // card's fixed pixel width, so fewer cards fit per sheet and each one prints physically
-        // larger.
+        // Anchoring the page to a card's own already-rendered pixel width keeps card pixels and
+        // page pixels in the same scale whatever supersampling the renderers use, so the layout
+        // never has to know a DPI. A card is 56mm wide (see PrintGeometry, which writes that same
+        // density into every PNG), which makes these dimensions a true A4 sheet.
         public static PageConfig a4FittingCardWidth(int cardWidthPx) {
             double pxPerMm = cardWidthPx / 56.0;
 

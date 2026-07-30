@@ -1,6 +1,5 @@
 package su.knst.crypto.command.commands.backup;
 
-import com.google.zxing.WriterException;
 import su.knst.crypto.Main;
 import su.knst.crypto.command.ArgSource;
 import su.knst.crypto.command.Command;
@@ -10,33 +9,28 @@ import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
-import su.knst.crypto.utils.FileUtils;
-import su.knst.crypto.utils.HexUtils;
+import su.knst.crypto.core.backup.BackupException;
+import su.knst.crypto.core.backup.BackupRequest;
+import su.knst.crypto.core.backup.BackupResult;
+import su.knst.crypto.core.backup.BackupService;
+import su.knst.crypto.core.render.QrCodec;
+import su.knst.crypto.core.secret.SecretSource;
+import su.knst.crypto.core.shamir.SecretSplitter;
+import su.knst.crypto.core.shamir.SplitScheme;
 import su.knst.crypto.utils.Prompts;
-import su.knst.crypto.utils.codes.ShareCardImage;
-import su.knst.crypto.utils.codes.ShareCardRenderer;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.security.NoSuchAlgorithmException;
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
-// Renders a single share card (see ShareCardImage) directly from a string/hex/file payload,
-// without running a Shamir split first. Useful to reprint one lost or damaged card for an
-// already-existing share, given its known hex value, or to produce an ad-hoc card for arbitrary
-// data.
+// Renders a single share card directly from a string/hex/file payload, without running a Shamir
+// split first. Useful to reprint one lost or damaged card for an already-existing share, given its
+// known hex value, or to produce an ad-hoc card for arbitrary data.
 public class CardCommand extends Command {
     private static final List<Prompts.Choice> TYPE_CHOICES = List.of(
             new Prompts.Choice("text", "Text", "Type the payload in directly"),
             new Prompts.Choice("hex", "Hex", "Provide the payload as a hex string"),
             new Prompts.Choice("file", "File", "Read the payload from a file on disk")
     );
-    private static final int PNG_DPI = 300;
 
     @Override
     public CommandResult run(ParamsContainer args) {
@@ -75,95 +69,68 @@ public class CardCommand extends Command {
         if (oThreshold.isEmpty())
             return CommandResult.error("No input");
 
-        byte[] payload;
+        if (!isKnownType(type))
+            return CommandResult.error("Unknown type");
 
-        switch (type) {
-            case "text" -> {
-                Optional<String> oText = in.restOfLine("Enter text for the card:");
+        Optional<SecretSource> oSource = askSource(in, type);
 
-                if (oText.isEmpty())
-                    return CommandResult.error("No input");
+        if (oSource.isEmpty())
+            return CommandResult.error("No input");
 
-                payload = oText.get().getBytes(StandardCharsets.UTF_8);
-            }
-            case "hex" -> {
-                Optional<String> oHex = in.string("Enter hex payload:");
+        SplitScheme scheme;
+        SecretSplitter splitter;
 
-                if (oHex.isEmpty())
-                    return CommandResult.error("No input");
-
-                String hex = oHex.get().trim();
-
-                if (!HexUtils.isValidHex(hex))
-                    return CommandResult.error("Not a valid hex string");
-
-                payload = HexUtils.hexStringToByteArray(hex);
-            }
-            case "file" -> {
-                Optional<Path> oPath = in.existingFilePath("Path to file?");
-
-                if (oPath.isEmpty())
-                    return CommandResult.error("No input");
-
-                try {
-                    payload = Files.readAllBytes(oPath.get());
-                } catch (IOException e) {
-                    return CommandResult.error("Failed to read source file: " + e.getMessage());
-                }
-            }
-            default -> {
-                return CommandResult.error("Unknown type");
-            }
+        try {
+            scheme = new SplitScheme(oTotalShares.get(), oThreshold.get());
+            splitter = SecretSplitter.reprint(oShareIndex.get(), scheme);
+        } catch (IllegalArgumentException e) {
+            return CommandResult.error(e.getMessage());
         }
 
-        return finish(type, oName.get(), oShareIndex.get(), oTotalShares.get(), oThreshold.get(), payload);
+        return create(new BackupRequest(oName.get(), null, splitter, oSource.get(), Main.getCurrentPath()),
+                oShareIndex.get());
     }
 
-    private CommandResult finish(String type, String name, int shareIndex, int totalShares, int threshold, byte[] payload) {
-        if (payload.length == 0)
-            return CommandResult.error("Payload is empty");
+    private static boolean isKnownType(String type) {
+        return TYPE_CHOICES.stream().anyMatch(choice -> choice.value().equals(type));
+    }
 
-        // hex-encoded as-is (no gzip): for type=hex this keeps the card's payload byte-identical
-        // to what was typed, which matters when reprinting a card for an already-existing share.
-        String hexPayload = HexUtils.bytesToHex(payload);
-        String checksumHex;
+    private Optional<SecretSource> askSource(ArgSource in, String type) {
+        return switch (type) {
+            case "text" -> in.restOfLine("Enter text for the card:").map(SecretSource::ofText);
+            case "hex" -> in.string("Enter hex payload:").map(hex -> SecretSource.ofHex(hex.trim()));
+            case "file" -> in.existingFilePath("Path to file?").map(SecretSource::ofFile);
+            default -> Optional.empty();
+        };
+    }
 
-        try {
-            checksumHex = HexUtils.hexHash(payload).substring(0, 6).toLowerCase(Locale.ROOT);
-        } catch (NoSuchAlgorithmException e) {
-            return CommandResult.error("Failed to compute checksum: " + e.getMessage());
-        }
-
-        String typeLabel = type.toUpperCase();
-        ShareCardRenderer.Result result;
+    private CommandResult create(BackupRequest request, int shareIndex) {
+        BackupResult result;
 
         try {
-            result = ShareCardRenderer.renderBestFit(
-                    name, shareIndex, totalShares, threshold, LocalDate.now(), hexPayload, checksumHex, typeLabel);
-        } catch (WriterException e) {
-            return CommandResult.error("Card failed to render: " + e.getMessage());
-        }
-
-        Path path = Main.getCurrentPath().resolve(name + "_" + shareIndex + ".png");
-
-        try {
-            FileUtils.createOwnerOnly(path);
-            ShareCardImage.writePng(result.image(), path, PNG_DPI);
-        } catch (IOException e) {
-            return CommandResult.error("Failed to write card file: " + e.getMessage());
+            result = new BackupService().create(request);
+        } catch (BackupException e) {
+            return CommandResult.error(e.getMessage());
         }
 
         CommandResultBuilder builder = CommandResultBuilder.builder();
 
-        builder.line("Card created: " + shareIndex + "/" + totalShares + ", " + threshold + " required to recover")
+        builder.line("Card created: " + shareIndex + "/" + result.scheme().total() + ", "
+                        + result.scheme().threshold() + " required to recover")
                 .line(result.hasQr()
-                        ? "QR error correction level: " + ShareCardRenderer.describeLevel(result.appliedLevel())
+                        ? "QR error correction level: " + QrCodec.describeLevel(result.appliedLevel())
                         : "QR code: none (payload too large at every error correction level, hex block only)");
 
-        if (result.decodeFailed() && !result.hasQr())
-            builder.line("Warning: the QR code did not reliably decode at any error correction level for this fixed payload; retrying would produce the same result, so the card was rendered without a QR code.");
+        if (!result.hasQr())
+            builder.line("Warning: the payload did not produce a readable QR code at any error correction level; "
+                    + "its bytes are fixed, so retrying would give the same result and the card was rendered "
+                    + "with the hex block only.");
 
-        builder.line(path.getFileName().toString());
+        for (var path : result.cardFiles())
+            builder.line(path.getFileName().toString());
+
+        for (var path : result.hexFiles())
+            builder.line(path.getFileName().toString());
 
         return builder.build();
     }

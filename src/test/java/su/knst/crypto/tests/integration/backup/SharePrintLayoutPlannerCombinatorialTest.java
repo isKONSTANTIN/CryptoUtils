@@ -3,11 +3,11 @@ package su.knst.crypto.tests.integration.backup;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.ImageTooLargeException;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PageConfig;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PlacedImage;
-import su.knst.crypto.utils.codes.SharePrintLayoutPlanner.PrintPage;
+import su.knst.crypto.core.render.PrintLayoutPlanner;
+import su.knst.crypto.core.render.PrintLayoutPlanner.ImageTooLargeException;
+import su.knst.crypto.core.render.PrintLayoutPlanner.PageConfig;
+import su.knst.crypto.core.render.PrintLayoutPlanner.PlacedImage;
+import su.knst.crypto.core.render.PrintLayoutPlanner.PrintPage;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ import java.util.stream.Stream;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Grids SharePrintLayoutPlanner across every realistic image count (1..16, covering a single
+ * Grids PrintLayoutPlanner across every realistic image count (1..16, covering a single
  * page through several overflowing pages) and every image-height category a real backup run can
  * produce: small/square, medium with a QR still shown, long with no QR (escalates to a portrait
  * sheet), and too-large-for-any-sheet. A single backup run always produces N images of identical
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SharePrintLayoutPlannerCombinatorialTest {
 
-    // Real rendered card width (496 nominal design px * 2x supersample - see ShareCardImage).
+    // Real rendered card width (496 nominal design px * 2x supersample - see CardImage).
     private static final int CARD_WIDTH_PX = 992;
     private static final PageConfig PAGE_CONFIG = PageConfig.a4FittingCardWidth(CARD_WIDTH_PX);
 
@@ -69,14 +69,14 @@ class SharePrintLayoutPlannerCombinatorialTest {
 
         if (category == Category.TOO_LARGE) {
             assertThrows(ImageTooLargeException.class,
-                    () -> SharePrintLayoutPlanner.plan(images, PAGE_CONFIG));
+                    () -> PrintLayoutPlanner.plan(images, PAGE_CONFIG));
             return;
         }
 
         List<PrintPage> plan;
 
         try {
-            plan = SharePrintLayoutPlanner.plan(images, PAGE_CONFIG);
+            plan = PrintLayoutPlanner.plan(images, PAGE_CONFIG);
         } catch (ImageTooLargeException e) {
             throw new AssertionError("unexpected rollback for category " + category, e);
         }

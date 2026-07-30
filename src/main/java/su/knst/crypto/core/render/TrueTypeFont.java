@@ -1,4 +1,4 @@
-package su.knst.crypto.utils.codes;
+package su.knst.crypto.core.render;
 
 import java.awt.geom.GeneralPath;
 import java.awt.geom.Path2D;

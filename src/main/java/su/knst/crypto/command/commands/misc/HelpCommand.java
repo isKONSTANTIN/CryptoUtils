@@ -25,10 +25,6 @@ public class HelpCommand extends Command {
                 .orElseGet(this::runList);
     }
 
-    public CommandResult run() {
-        return runList();
-    }
-
     private CommandResult runList() {
         List<Panel> panels = new ArrayList<>();
 

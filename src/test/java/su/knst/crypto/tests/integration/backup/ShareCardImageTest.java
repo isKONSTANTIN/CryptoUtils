@@ -14,7 +14,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import su.knst.crypto.utils.HexUtils;
-import su.knst.crypto.utils.codes.ShareCardImage;
+import su.knst.crypto.core.render.CardImage;
+import su.knst.crypto.core.render.PngWriter;
+import su.knst.crypto.core.render.PrintGeometry;
 import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
 
 import javax.imageio.ImageIO;
@@ -42,16 +44,16 @@ class ShareCardImageTest {
         Files.deleteIfExists(IMAGE_PATH);
     }
 
-    private static ShareCardImage.ShareCardData data(String hex) {
+    private static CardImage.ShareCardData data(String hex) {
         return data(hex, true);
     }
 
-    private static ShareCardImage.ShareCardData data(String hex, boolean showQr) {
+    private static CardImage.ShareCardData data(String hex, boolean showQr) {
         return data(hex, "abcdef", showQr);
     }
 
-    private static ShareCardImage.ShareCardData data(String hex, String checksumHex, boolean showQr) {
-        return new ShareCardImage.ShareCardData(
+    private static CardImage.ShareCardData data(String hex, String checksumHex, boolean showQr) {
+        return new CardImage.ShareCardData(
                 "my_backup", 1, 5, 3, LocalDate.of(2026, 7, 28), hex, checksumHex, "SEED", ErrorCorrectionLevel.M, showQr);
     }
 
@@ -101,7 +103,7 @@ class ShareCardImageTest {
             RANDOM.nextBytes(shareBytes);
             hex = HexUtils.bytesToHex(shareBytes);
 
-            BufferedImage image = ShareCardImage.build(data(hex));
+            BufferedImage image = CardImage.build(data(hex));
             ImageIO.write(image, "png", IMAGE_PATH.toFile());
 
             decoded = new SimpleQRCodeWorker().readCode(IMAGE_PATH.toString());
@@ -131,7 +133,7 @@ class ShareCardImageTest {
             hex = HexUtils.bytesToHex(shareBytes);
             checksum = checksumFor(shareBytes);
 
-            BufferedImage image = ShareCardImage.build(data(hex, checksum, true));
+            BufferedImage image = CardImage.build(data(hex, checksum, true));
             ImageIO.write(image, "png", IMAGE_PATH.toFile());
 
             decodedHex = new SimpleQRCodeWorker().readCode(IMAGE_PATH.toString());
@@ -152,21 +154,21 @@ class ShareCardImageTest {
         for (int i = 0; i < 10_000; i++)
             hugeHex.append("AB");
 
-        assertThrows(WriterException.class, () -> ShareCardImage.build(data(hugeHex.toString())));
+        assertThrows(WriterException.class, () -> CardImage.build(data(hugeHex.toString())));
     }
 
     // 496 logical px (42mm @ 300 DPI) rendered at a 2x supersample for sharper text/QR edges.
     @Test
     void cardWidthIsExactly496LogicalPixels() throws WriterException {
-        BufferedImage image = ShareCardImage.build(data("AABBCCDD"));
+        BufferedImage image = CardImage.build(data("AABBCCDD"));
 
         assertEquals(496 * 2, image.getWidth());
     }
 
     @Test
     void cardHeightIsDeterministicForSameInputs() throws WriterException {
-        BufferedImage first = ShareCardImage.build(data("AABBCCDDEEFF0011"));
-        BufferedImage second = ShareCardImage.build(data("AABBCCDDEEFF0011"));
+        BufferedImage first = CardImage.build(data("AABBCCDDEEFF0011"));
+        BufferedImage second = CardImage.build(data("AABBCCDDEEFF0011"));
 
         assertEquals(first.getHeight(), second.getHeight());
     }
@@ -180,8 +182,8 @@ class ShareCardImageTest {
             longHexBuilder.append("AABBCCDD");
         String longHex = longHexBuilder.toString();
 
-        BufferedImage shortCard = ShareCardImage.build(data(shortHex));
-        BufferedImage longCard = ShareCardImage.build(data(longHex));
+        BufferedImage shortCard = CardImage.build(data(shortHex));
+        BufferedImage longCard = CardImage.build(data(longHex));
 
         assertTrue(longCard.getHeight() > shortCard.getHeight());
     }
@@ -190,8 +192,8 @@ class ShareCardImageTest {
     void hidingQrShrinksTheCardAndDropsTheQrBlock() throws WriterException, IOException {
         String hex = "AABBCCDD";
 
-        BufferedImage withQr = ShareCardImage.build(data(hex, true));
-        BufferedImage withoutQr = ShareCardImage.build(data(hex, false));
+        BufferedImage withQr = CardImage.build(data(hex, true));
+        BufferedImage withoutQr = CardImage.build(data(hex, false));
 
         assertTrue(withoutQr.getHeight() < withQr.getHeight());
 
@@ -201,10 +203,10 @@ class ShareCardImageTest {
 
     @Test
     void pngWrittenByWritePngContainsPhysChunk(@TempDir Path tempDir) throws IOException, WriterException {
-        BufferedImage image = ShareCardImage.build(data("AABBCCDD"));
+        BufferedImage image = CardImage.build(data("AABBCCDD"));
         Path path = tempDir.resolve("card.png");
 
-        ShareCardImage.writePng(image, path, 300);
+        PngWriter.write(image, path);
 
         byte[] bytes = Files.readAllBytes(path);
         String content = new String(bytes, java.nio.charset.StandardCharsets.ISO_8859_1);
@@ -221,6 +223,6 @@ class ShareCardImageTest {
 
         // written at 300 DPI nominal, but the buffer is a 2x supersample, so the recorded density
         // must double too or the physical print size would come out twice as large
-        assertEquals(23622, pixelsPerUnitXAxis);
+        assertEquals(PrintGeometry.PIXELS_PER_METER, pixelsPerUnitXAxis);
     }
 }

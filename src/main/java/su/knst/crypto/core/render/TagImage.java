@@ -1,4 +1,4 @@
-package su.knst.crypto.utils.codes;
+package su.knst.crypto.core.render;
 
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.EncodeHintType;
@@ -20,7 +20,7 @@ import java.util.Map;
 /**
  * Renders a "container tag" (бирка): a small label meant to be attached to the physical
  * container (box/safe/folder) holding one Shamir share, for fast visual identification from a
- * distance. Unlike {@link ShareCardImage}, a tag carries no QR code and no hex dump of the share
+ * distance. Unlike {@link CardImage}, a tag carries no QR code and no hex dump of the share
  * - it is not usable to reconstruct the secret, only to identify which container holds which
  * share.
  *

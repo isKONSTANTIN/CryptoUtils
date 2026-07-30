@@ -95,13 +95,6 @@ public class ArgsTreeBuilder {
         return sub;
     }
 
-    public ArgsRecursiveTreeBuilder recursiveSubTree() {
-        ArgsRecursiveTreeBuilder sub = new ArgsRecursiveTreeBuilder(this);
-        candidates.add(sub);
-
-        return sub;
-    }
-
     public ArgsTreeBuilder parent() {
         return parent;
     }

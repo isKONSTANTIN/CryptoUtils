@@ -82,11 +82,6 @@ public class ScriptedArgSource implements ArgSource {
     }
 
     @Override
-    public Optional<Path> directory(String prompt) {
-        return next().map(p -> Main.getCurrentPath().resolve(p));
-    }
-
-    @Override
     public Optional<String[]> words(String prompt) {
         if (cursor >= args.size())
             return Optional.empty();

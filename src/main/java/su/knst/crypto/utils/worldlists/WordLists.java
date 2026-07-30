@@ -1,6 +1,5 @@
 package su.knst.crypto.utils.worldlists;
 
-import su.knst.crypto.Main;
 
 import java.util.*;
 
@@ -36,7 +35,7 @@ public class WordLists {
         String text;
 
         try {
-            text = new String(Objects.requireNonNull(Main.class.getResourceAsStream(path)).readAllBytes());
+            text = new String(Objects.requireNonNull(WordLists.class.getResourceAsStream(path)).readAllBytes());
         } catch (Exception e) {
             return false;
         }
