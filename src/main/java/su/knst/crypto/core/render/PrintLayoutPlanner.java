@@ -44,10 +44,10 @@ public final class PrintLayoutPlanner {
     public record PageConfig(int portraitWidthPx, int portraitHeightPx) {
         // Anchoring the page to a card's own already-rendered pixel width keeps card pixels and
         // page pixels in the same scale whatever supersampling the renderers use, so the layout
-        // never has to know a DPI. A card is 56mm wide (see PrintGeometry, which writes that same
-        // density into every PNG), which makes these dimensions a true A4 sheet.
+        // never has to know a DPI. A card is PrintGeometry.CARD_WIDTH_MM wide (and PrintGeometry
+        // writes that same density into every PNG), which makes these dimensions a true A4 sheet.
         public static PageConfig a4FittingCardWidth(int cardWidthPx) {
-            double pxPerMm = cardWidthPx / 56.0;
+            double pxPerMm = cardWidthPx / PrintGeometry.CARD_WIDTH_MM;
 
             return new PageConfig(
                     (int) Math.round(210 * pxPerMm),

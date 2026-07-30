@@ -208,17 +208,18 @@ class SharePrintLayoutPlannerTest {
 
     @Test
     void realA4ConfigDerivedFromActualCardPixelWidth() throws ImageTooLargeException {
-        int cardWidth = 992; // real rendered card width (496 nominal design px * 2x supersample)
+        int cardWidth = 1052; // real rendered card width (526 nominal design px * 2x supersample)
         PageConfig a4 = PageConfig.a4FittingCardWidth(cardWidth);
 
-        // page size is derived from the card's rendered width treated as 56mm (not its true 42mm
-        // design width, see PageConfig.a4FittingCardWidth), so a row fits 210/56 = 3.75 card widths
-        // and a column fits 297/56 ~= 5.30 card widths.
-        assertEquals(3720, a4.portraitWidthPx());
-        assertEquals(5261, a4.landscapeWidthPx());
+        // page size is derived from the card's rendered width treated as 59.4mm (see
+        // PageConfig.a4FittingCardWidth), so a row fits 210/59.4 ~= 3.54 card widths and a column
+        // fits exactly 297/59.4 = 5 of them.
+        assertEquals(3719, a4.portraitWidthPx());
+        assertEquals(5260, a4.landscapeWidthPx());
+        assertEquals(5 * cardWidth, a4.landscapeWidthPx());
 
         List<PrintPage> plan = PrintLayoutPlanner.plan(
-                List.of(image(992, 1200), image(992, 1200)), a4);
+                List.of(image(1052, 1200), image(1052, 1200)), a4);
 
         assertEquals(1, plan.size());
         assertEquals(Orientation.LANDSCAPE, plan.get(0).orientation());

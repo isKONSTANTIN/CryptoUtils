@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 class SharePrintLayoutPlannerCombinatorialTest {
 
-    // Real rendered card width (496 nominal design px * 2x supersample - see CardImage).
-    private static final int CARD_WIDTH_PX = 992;
+    // Real rendered card width (526 nominal design px * 2x supersample - see CardImage).
+    private static final int CARD_WIDTH_PX = 1052;
     private static final PageConfig PAGE_CONFIG = PageConfig.a4FittingCardWidth(CARD_WIDTH_PX);
 
     enum Category {

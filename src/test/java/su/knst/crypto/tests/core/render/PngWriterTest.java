@@ -84,10 +84,10 @@ class PngWriterTest {
     }
 
     @Test
-    void aCardPrints56mmWide() throws Exception {
+    void aCardPrintsOneFifthOfALandscapeA4Wide() throws Exception {
         BufferedImage card = card();
 
-        assertEquals(56.0, PrintGeometry.pxToMm(card.getWidth()), 0.1);
+        assertEquals(59.4, PrintGeometry.pxToMm(card.getWidth()), 0.1);
     }
 
     @Test

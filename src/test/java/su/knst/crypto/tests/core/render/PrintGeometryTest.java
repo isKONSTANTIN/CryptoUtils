@@ -9,7 +9,7 @@ class PrintGeometryTest {
 
     @Test
     void millimetresAndPixelsAreInverses() {
-        assertEquals(56.0, PrintGeometry.pxToMm(PrintGeometry.mmToPx(56.0)), 0.05);
+        assertEquals(59.4, PrintGeometry.pxToMm(PrintGeometry.mmToPx(59.4)), 0.05);
         assertEquals(25.4, PrintGeometry.pxToMm(PrintGeometry.mmToPx(25.4)), 0.05);
         assertEquals(210.0, PrintGeometry.pxToMm(PrintGeometry.mmToPx(210.0)), 0.05);
     }
@@ -20,9 +20,10 @@ class PrintGeometryTest {
     }
 
     @Test
-    void aCardIs56mmWide() {
-        // 496 logical px at the card's 2x supersampling
-        assertEquals(56.0, PrintGeometry.pxToMm(992), 0.05);
+    void aCardIsOneFifthOfALandscapeA4Wide() {
+        // 526 logical px at the card's 2x supersampling
+        assertEquals(59.4, PrintGeometry.pxToMm(1052), 0.05);
+        assertEquals(297.0 / 5.0, PrintGeometry.CARD_WIDTH_MM, 0.001);
     }
 
     @Test

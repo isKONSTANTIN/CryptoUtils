@@ -23,12 +23,13 @@ import java.util.Map;
  * share/threshold/date metadata row, a QR code, a formatted hex dump of the share bytes, a
  * checksum row, a blank notes line and a footer, all inside a dashed cut/fold border.
  *
- * The card is 496 logical px wide, which {@link PrintGeometry} prints as 56mm - narrow enough that
- * three fit across an A4 sheet, wide enough that the 9pt hex fallback stays readable by eye. Height
- * is not fixed: it grows with the number of wrapped hex lines, which depends on share size.
+ * The card prints {@link PrintGeometry#CARD_WIDTH_MM}mm wide - one fifth of a landscape A4, so five
+ * cards fit across a sheet with nothing left over - which at the print density works out to 526
+ * logical px. Height is not fixed: it grows with the number of wrapped hex lines, which depends on
+ * share size.
  */
 public final class CardImage {
-    // The whole card is laid out in "logical" pixels (design px @ 300 DPI, see class doc), then
+    // The whole card is laid out in "logical" pixels (half a print pixel each, see class doc), then
     // rendered into a canvas RENDER_SCALE times larger and scaled up via the Graphics2D transform.
     // Vector content (text, lines, fills) simply gets rasterized with more samples this way, which
     // is what makes the small label/hex text noticeably crisper; only the QR bitmap needs special
@@ -36,7 +37,7 @@ public final class CardImage {
     // scaled transform would blur its hard edges instead of sharpening them.
     static final int RENDER_SCALE = 2;
 
-    static final int CARD_WIDTH = 496;
+    static final int CARD_WIDTH = PrintGeometry.mmToPx(PrintGeometry.CARD_WIDTH_MM) / RENDER_SCALE;
     private static final int PADDING_TOP = 16;
     private static final int PADDING_SIDE = 20;
     private static final int PADDING_BOTTOM = 18;

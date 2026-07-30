@@ -9,8 +9,16 @@ package su.knst.crypto.core.render;
  * standalone and ~25mm tall on a sheet.
  */
 public final class PrintGeometry {
-    /** A card is {@value CardImage#CARD_WIDTH} logical px wide, supersampled, and prints 56mm wide. */
-    public static final double PX_PER_MM = (double) (CardImage.CARD_WIDTH * CardImage.RENDER_SCALE) / 56.0;
+    /**
+     * A card prints exactly one fifth of a landscape A4's 297mm width, so five of them sit across a
+     * sheet edge to edge. {@link CardImage} derives its pixel width from this, not the other way
+     * round: the density below has to stay fixed, or every other artifact sized in raw pixels (the
+     * tag's 25.4mm height above all) would silently change physical size along with the card.
+     */
+    public static final double CARD_WIDTH_MM = 297.0 / 5.0;
+
+    /** 450 DPI - the density every printable artifact is rasterized and tagged with. */
+    public static final double PX_PER_MM = 450.0 / 25.4;
 
     public static final int PIXELS_PER_METER = (int) Math.round(PX_PER_MM * 1000);
 

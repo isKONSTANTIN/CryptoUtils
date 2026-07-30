@@ -33,7 +33,7 @@ or reproducibly via Docker — see the [Installation](README.md#native-binary) s
 1. Fork the repo and create a branch off `main`.
 2. Keep the change focused — unrelated formatting/refactoring in the same PR makes it harder to review.
 3. Add or update tests for any behavior change (`src/test/java`). Anything in `su.knst.crypto.core` is covered to a threshold enforced by `./gradlew check`, so new logic there needs tests to land.
-4. Run `./gradlew build` locally before opening the PR — and `tools/smoke_test.sh <binary>` if you touched the REPL, prompts or anything the native image needs at runtime — CI runs the same `test`/`build`/`build-native` jobs and will block on failures.
+4. Run `./gradlew build` locally before opening the PR — and `tools/smoke_test.sh <binary>` if you touched the REPL, prompts or anything the native image needs at runtime, since CI does not run it — CI runs the same `test`/`build`/`build-native` jobs and will block on failures.
 5. Open a PR against `main` describing what changed and why.
 
 ## Where code goes

@@ -157,12 +157,12 @@ class ShareCardImageTest {
         assertThrows(WriterException.class, () -> CardImage.build(data(hugeHex.toString())));
     }
 
-    // 496 logical px (42mm @ 300 DPI) rendered at a 2x supersample for sharper text/QR edges.
+    // 526 logical px (59.4mm - one fifth of a landscape A4) at a 2x supersample for sharper edges.
     @Test
-    void cardWidthIsExactly496LogicalPixels() throws WriterException {
+    void cardWidthIsExactly526LogicalPixels() throws WriterException {
         BufferedImage image = CardImage.build(data("AABBCCDD"));
 
-        assertEquals(496 * 2, image.getWidth());
+        assertEquals(526 * 2, image.getWidth());
     }
 
     @Test

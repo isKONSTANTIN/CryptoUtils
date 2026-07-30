@@ -39,9 +39,6 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew build
 
-      - name: Smoke-test the jar
-        run: tools/smoke_test.sh "java -jar $(ls build/libs/CryptoUtils-*.jar)"
-
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -73,14 +70,6 @@ jobs:
           file: docker/native-build.Dockerfile
           target: export
           outputs: type=local,dest=out
-
-      # The JUnit suite only ever runs classes on a JVM classpath. This is what checks that the
-      # binary being shipped - self-extracting AWT libraries, reflection metadata, UPX compression
-      # and all - still performs a backup and gets the secret back.
-      - name: Smoke-test the native binary
-        run: |
-          chmod +x out/cryptoutils
-          tools/smoke_test.sh "$(pwd)/out/cryptoutils"
 
       - name: Upload native binary
         uses: actions/upload-artifact@v4

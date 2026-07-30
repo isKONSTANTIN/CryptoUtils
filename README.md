@@ -46,7 +46,7 @@ Path to file? secret.txt
 
 Backup created: 3 parts, 2 required to recover
 Type: FILE
-QR error correction level: Quartile (3/4)
+QR error correction level: High (4/4)
 demo_1.png
 demo_2.png
 demo_3.png
@@ -60,7 +60,7 @@ Print sheets:
 demo_print_1.png
 ```
 
-Each share becomes a card carrying a QR code of the share, its hex dump for when no scanner is at hand, and a SHA-256 checksum with a CODE128 barcode so a card can be identified without decoding it. Cards print 56 mm wide; the tags that go on the containers print 25.4 mm tall and as wide as their name needs. All of it is also tiled onto A4 sheets at the same scale, ready to print at 100% and cut.
+Each share becomes a card carrying a QR code of the share, its hex dump for when no scanner is at hand, and a SHA-256 checksum with a CODE128 barcode so a card can be identified without decoding it. Cards print 59.4 mm wide — one fifth of a landscape A4, so five sit across a sheet edge to edge; the tags that go on the containers print 25.4 mm tall and as wide as their name needs. All of it is also tiled onto A4 sheets at the same scale, ready to print at 100% and cut.
 
 <p align="center">
   <img src="example/demo_1.png" alt="A CryptoUtils backup share card, showing a QR code, hex dump and checksum barcode" width="380">
@@ -197,7 +197,7 @@ Requires a JVM 17+ (any platform).
 ./gradlew check   # tests plus the coverage gate on su.knst.crypto.core
 ```
 
-Tests run classes on a JVM classpath, which says nothing about the binary that actually ships. `tools/smoke_test.sh` drives a built CryptoUtils through a full backup and restore by feeding its prompts on stdin, and CI runs it against both the jar and each native binary:
+Tests run classes on a JVM classpath, which says nothing about the binary that actually ships. `tools/smoke_test.sh` drives a built CryptoUtils through a full backup and restore by feeding its prompts on stdin. It is a local check — run it by hand against a jar or a native binary:
 
 ```
 tools/smoke_test.sh build/native/nativeCompile/cryptoutils
