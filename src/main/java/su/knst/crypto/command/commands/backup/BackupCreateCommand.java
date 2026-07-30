@@ -153,10 +153,7 @@ public class BackupCreateCommand extends Command {
     private static CommandResult format(BackupResult result) {
         CommandResultBuilder builder = CommandResultBuilder.builder();
 
-        builder.line(result.scheme().isSplit()
-                        ? "Backup created: " + result.scheme().total() + " parts, "
-                                + result.scheme().threshold() + " required to recover"
-                        : "Backup created: a single card holding the whole secret")
+        builder.line(headline(result))
                 .line("Type: " + result.type().label())
                 .line(result.hasQr()
                         ? "QR error correction level: " + QrCodec.describeLevel(result.appliedLevel())
@@ -171,6 +168,18 @@ public class BackupCreateCommand extends Command {
                 reason -> builder.line("Warning: failed to generate print sheets: " + reason));
 
         return builder.build();
+    }
+
+    private static String headline(BackupResult result) {
+        if (!result.isCompleteBackup())
+            return "Card reprinted: share " + result.shareIndices().get(0) + " of "
+                    + result.scheme().total() + ", " + result.scheme().threshold() + " required to recover";
+
+        if (!result.scheme().isSplit())
+            return "Backup created: a single card holding the whole secret";
+
+        return "Backup created: " + result.scheme().total() + " parts, "
+                + result.scheme().threshold() + " required to recover";
     }
 
     private static void appendFiles(CommandResultBuilder builder, String header, List<Path> files) {

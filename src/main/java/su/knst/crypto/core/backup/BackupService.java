@@ -4,6 +4,7 @@ import su.knst.crypto.core.secret.GzipCodec;
 import su.knst.crypto.core.secret.SecretException;
 import su.knst.crypto.core.secret.SecretType;
 import su.knst.crypto.core.shamir.SecretSplitter;
+import su.knst.crypto.core.shamir.Share;
 
 import java.awt.image.BufferedImage;
 import java.time.LocalDate;
@@ -59,6 +60,7 @@ public final class BackupService {
                 request.name(),
                 cards.shares().scheme(),
                 type,
+                cards.shares().shares().stream().map(Share::index).toList(),
                 cards.appliedLevel(),
                 cards.hasQr(),
                 written.cardFiles(),

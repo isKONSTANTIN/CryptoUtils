@@ -173,6 +173,25 @@ class BackupServiceTest {
     }
 
     @Test
+    void aFullBackupReportsEveryShareItPrinted() throws Exception {
+        BackupResult result = backup(request("service_indices", null,
+                SecretSplitter.shamir(SplitScheme.of(4, 2)), SecretSource.ofText("all of them")));
+
+        assertEquals(List.of(1, 2, 3, 4), result.shareIndices());
+        assertTrue(result.isCompleteBackup());
+    }
+
+    @Test
+    void aReprintReportsOnlyTheShareItReplaced() throws Exception {
+        BackupResult result = backup(request("service_reprint", null,
+                SecretSplitter.reprint(3, SplitScheme.of(5, 2)), SecretSource.ofHex("00112233445566778899AABB")));
+
+        assertEquals(List.of(3), result.shareIndices());
+        // one card out of five is a replacement, not a backup - the command says so
+        assertFalse(result.isCompleteBackup());
+    }
+
+    @Test
     void printSheetsAreProducedForMultipleArtifacts() throws Exception {
         BackupResult result = backup(request("service_sheets", null,
                 SecretSplitter.shamir(SplitScheme.of(3, 2)), SecretSource.ofText("sheet me")));
