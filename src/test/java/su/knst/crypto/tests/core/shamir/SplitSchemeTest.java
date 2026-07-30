@@ -34,6 +34,14 @@ class SplitSchemeTest {
     }
 
     @Test
+    void theConstructorItselfStillRefusesANonsenseThreshold() {
+        // of() demands K >= 2; the record's own contract is the weaker K >= 1, which single() uses
+        assertThrows(IllegalArgumentException.class, () -> new SplitScheme(1, 0));
+        assertThrows(IllegalArgumentException.class, () -> new SplitScheme(3, -1));
+        assertDoesNotThrow(() -> new SplitScheme(1, 1));
+    }
+
+    @Test
     void singleIsOneOfOneAndNotSplit() {
         SplitScheme scheme = SplitScheme.single();
 

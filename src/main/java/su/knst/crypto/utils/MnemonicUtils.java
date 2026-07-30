@@ -76,24 +76,26 @@ public class MnemonicUtils {
 
     public static void checkMnemonic(String[] mnemonic) throws WrongMnemonicException, NoSuchAlgorithmException {
         int mnemonicLength = mnemonic.length;
-
         if (mnemonicLength != 12 && mnemonicLength != 24)
             throw new WrongMnemonicException("Wrong mnemonic size: " + mnemonicLength + " words not supported");
 
         WordLists.WordList wordList = WordLists.getActiveList();
-
         for (String word : mnemonic) {
             if (wordList.getIndex(word).isEmpty())
                 throw new WrongMnemonicException("'" + word + "' not found in " + wordList.name() + " list");
         }
 
         byte[] entropyWithChecksum = fromMnemonic(mnemonic);
-        byte[] hash = sha256(Arrays.copyOf(entropyWithChecksum, entropyWithChecksum.length - 1)); // calculate only entropy hash
+        int last = entropyWithChecksum.length - 1;
+        byte[] hash = sha256(Arrays.copyOf(entropyWithChecksum, last));
 
-        byte hashMask = (byte)(Byte.MAX_VALUE - (mnemonicLength == 12 ? 15 : 0)); // if 12-word seed byte mask is 11110000, else - 11111111
+        int checksumMask = (mnemonicLength == 12) ? 0xF0 : 0xFF;
 
-        if ((entropyWithChecksum[entropyWithChecksum.length - 1] & hashMask) != (hash[0] & hashMask))
+        if (((entropyWithChecksum[last] ^ hash[0]) & checksumMask) != 0)
             throw new WrongMnemonicException("Hash sum not valid");
+
+        if (mnemonicLength == 12 && (entropyWithChecksum[last] & 0x0F) != 0)
+            throw new WrongMnemonicException("Padding bits not zero");
     }
 
     public static String[] createMnemonic(byte[] entropy) throws NoSuchAlgorithmException {

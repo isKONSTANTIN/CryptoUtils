@@ -139,11 +139,6 @@ public final class GlyphText {
     }
 
     public static void drawCenteredTextBold(Graphics2D g, TrueTypeFont font, String text, float y, int containerWidth,
-                                             float pixelSize, float letterSpacing, Color color, float boldStrokeWidth) {
-        drawCenteredTextBold(g, font, text, y, containerWidth, pixelSize, letterSpacing, color, boldStrokeWidth, 0);
-    }
-
-    public static void drawCenteredTextBold(Graphics2D g, TrueTypeFont font, String text, float y, int containerWidth,
                                              float pixelSize, float letterSpacing, Color color, float boldStrokeWidth,
                                              int containerX) {
         float width = stringWidth(font, text, pixelSize, letterSpacing);

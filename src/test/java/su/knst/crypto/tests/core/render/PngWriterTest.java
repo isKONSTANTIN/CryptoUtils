@@ -9,6 +9,7 @@ import su.knst.crypto.core.render.CardImage;
 import su.knst.crypto.core.render.PngWriter;
 import su.knst.crypto.core.render.PrintGeometry;
 import su.knst.crypto.core.render.PrintLayoutPlanner;
+import su.knst.crypto.core.render.QrCodec;
 import su.knst.crypto.core.render.TagImage;
 
 import java.awt.image.BufferedImage;
@@ -107,6 +108,37 @@ class PngWriterTest {
 
         assertEquals(210.0, PrintGeometry.pxToMm(page.portraitWidthPx()), 0.5);
         assertEquals(297.0, PrintGeometry.pxToMm(page.portraitHeightPx()), 0.5);
+    }
+
+    @Test
+    void everyErrorCorrectionLevelHasAReadableName() {
+        for (ErrorCorrectionLevel level : QrCodec.LEVELS) {
+            String described = QrCodec.describeLevel(level);
+
+            assertTrue(described.matches("\\w+ \\(\\d/4\\)"), described);
+        }
+
+        assertTrue(QrCodec.describeLevel(ErrorCorrectionLevel.L).startsWith("Low"));
+        assertTrue(QrCodec.describeLevel(ErrorCorrectionLevel.M).startsWith("Medium"));
+        assertTrue(QrCodec.describeLevel(ErrorCorrectionLevel.Q).startsWith("Quartile"));
+        assertTrue(QrCodec.describeLevel(ErrorCorrectionLevel.H).startsWith("High"));
+    }
+
+    @Test
+    void decodingAnImageWithNoCodeInItYieldsNothing() {
+        BufferedImage blank = new BufferedImage(200, 200, BufferedImage.TYPE_INT_RGB);
+
+        assertNull(QrCodec.decode(blank));
+    }
+
+    @Test
+    void aCardWithAnEmptyPayloadStillRenders() throws Exception {
+        BufferedImage card = CardImage.build(new CardImage.ShareCardData(
+                "empty_payload", 1, 1, 1, LocalDate.of(2026, 7, 30),
+                "", "a1b2c3", "TEXT", ErrorCorrectionLevel.L, false));
+
+        assertTrue(card.getWidth() > 0);
+        assertTrue(card.getHeight() > 0);
     }
 
     @Test

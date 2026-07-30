@@ -164,6 +164,15 @@ class BackupServiceTest {
     }
 
     @Test
+    void anUnwritableDirectoryIsReported() {
+        BackupException error = assertThrows(BackupException.class, () -> new BackupService().create(
+                new BackupRequest("service_nowhere", null, SecretSplitter.single(),
+                        SecretSource.ofText("nowhere to go"), HERE.resolve("no_such_directory_here"))));
+
+        assertTrue(error.getMessage().contains("Failed to write backup files"), error.getMessage());
+    }
+
+    @Test
     void printSheetsAreProducedForMultipleArtifacts() throws Exception {
         BackupResult result = backup(request("service_sheets", null,
                 SecretSplitter.shamir(SplitScheme.of(3, 2)), SecretSource.ofText("sheet me")));

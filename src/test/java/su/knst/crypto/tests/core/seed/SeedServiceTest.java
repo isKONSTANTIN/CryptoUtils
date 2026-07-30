@@ -2,15 +2,18 @@ package su.knst.crypto.tests.core.seed;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import su.knst.crypto.core.seed.SeedException;
 import su.knst.crypto.core.seed.SeedService;
 import su.knst.crypto.core.seed.SeedView;
 import su.knst.crypto.utils.HexUtils;
+import su.knst.crypto.utils.worldlists.WordLists;
 
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -54,15 +57,78 @@ class SeedServiceTest {
     }
 
     @Test
-    void aBrokenChecksumIsRejected() throws SeedException {
-        String[] words = SeedService.fromEntropy(randomEntropy(16));
-
-        // swapping two words keeps every word valid but breaks the phrase's checksum
-        String first = words[0];
-        words[0] = words[1];
-        words[1] = first;
+    void aBrokenChecksumIsRejected() {
+        // all-zero entropy's phrase is "abandon" x11 + "about"; every word here is a real BIP-39
+        // word and the length is right, so only the checksum can reject it
+        String[] words = new String[12];
+        Arrays.fill(words, "abandon");
 
         assertThrows(SeedException.class, () -> SeedService.toEntropy(words));
+    }
+
+    /**
+     * A BIP-39 checksum is ENT/32 bits long - 4 bits for a 12-word phrase, 8 for a 24-word one - so
+     * corrupting a phrase is caught with probability 1 - 2^-CS, not always. Swapping one word for
+     * another changes the entropy while leaving the phrase's own checksum bits alone, and 1 in 16
+     * such corruptions of a 12-word phrase still checks out (1 in 256 for 24 words).
+     * <p>
+     * That rate is the point: it is what tells us the checksum is the length it should be. The
+     * sample is driven by a fixed seed so the measurement is repeatable rather than occasionally
+     * red for no reason.
+     */
+    @ParameterizedTest(name = "{0} words: about 1 in {1} corruptions slips through")
+    @CsvSource({"12, 16", "24, 256"})
+    void corruptionSlipsThroughAtTheRateTheChecksumLengthAllows(int wordCount, int oneIn) throws SeedException {
+        int samples = 50000;
+        Random random = new Random(20260730L + wordCount);
+
+        String[] source = SeedService.fromEntropy(
+                randomEntropy(wordCount == 12 ? SeedService.SHORT_PHRASE_ENTROPY : SeedService.FULL_PHRASE_ENTROPY));
+
+        int accepted = 0;
+
+        for (int i = 0; i < samples; i++) {
+            String[] corrupted = source.clone();
+
+            // never the last word: that one carries the checksum bits themselves, and replacing it
+            // would test something else entirely
+            int position = random.nextInt(corrupted.length - 1);
+            String replacement = randomWord(random);
+
+            if (replacement.equals(corrupted[position]))
+                continue;
+
+            corrupted[position] = replacement;
+
+            try {
+                SeedService.toEntropy(corrupted);
+                accepted++;
+            } catch (SeedException expected) {
+                // the normal case
+            }
+        }
+
+        double rate = (double) accepted / samples;
+        double expected = 1.0 / oneIn;
+
+        // +-40% of the expected rate. At this sample size that is over 5 standard deviations even
+        // for the rarer 24-word case, so the measurement is never marginal - while a checksum one
+        // bit shorter or longer would double or halve the rate and fail outright.
+        assertEquals(expected, rate, expected * 0.4,
+                "expected about 1 in " + oneIn + " corruptions to pass, got " + accepted + " of " + samples);
+    }
+
+    static String randomWord(Random random) {
+        return WordLists.getActiveList().array()[random.nextInt(WordLists.getActiveList().array().length)];
+    }
+
+    @Test
+    void theSamePhraseWithAValidChecksumIsAccepted() throws SeedException {
+        String[] words = new String[12];
+        Arrays.fill(words, "abandon");
+        words[11] = "about";
+
+        assertArrayEquals(new byte[16], SeedService.toEntropy(words));
     }
 
     @Test

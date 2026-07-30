@@ -1,6 +1,8 @@
 # Gradle
 .gradle/
 build/
+# machine-specific: points the daemon at a JDK this Gradle version supports
+gradle.properties
 
 # Docker build output (docker/native-build.Dockerfile --output type=local,dest=out)
 out/
@@ -11,3 +13,6 @@ out/
 
 # OS
 .DS_Store
+
+# Manual-run artifacts from the repo root
+test_*.png

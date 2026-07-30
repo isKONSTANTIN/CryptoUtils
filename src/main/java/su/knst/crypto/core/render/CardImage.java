@@ -470,9 +470,4 @@ public final class CardImage {
     private static float stringWidth(TrueTypeFont font, String text, float pixelSize, float letterSpacing) {
         return GlyphText.stringWidth(font, text, pixelSize, letterSpacing);
     }
-
-    private static void drawText(Graphics2D g, TrueTypeFont font, String text, float x, float baselineY,
-                                  float pixelSize, float letterSpacing, Color color) {
-        GlyphText.drawText(g, font, text, x, baselineY, pixelSize, letterSpacing, color);
-    }
 }

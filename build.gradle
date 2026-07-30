@@ -1,11 +1,12 @@
 plugins {
     id 'java'
     id "application"
+    id 'jacoco'
     id 'org.graalvm.buildtools.native' version '1.1.6'
 }
 
 group 'su.knrg.crypto'
-version '1.2.0'
+version '2.0.0'
 mainClassName = 'su.knst.crypto.Main'
 
 sourceSets {
@@ -47,7 +48,60 @@ java {
 
 test {
     useJUnitPlatform()
+    finalizedBy 'jacocoTestReport'
 }
+
+// The core package holds every decision the tool makes and is deliberately free of terminal and
+// filesystem-layout concerns, so it can and should be covered outright. Only core is measured:
+// the cli layer is exercised through it, but its coverage is not the target.
+//
+// TrueTypeFont is the one exception. It is a parser for a third-party binary format, and the parts
+// of it that stay dark are the cmap sub-formats (0, 6 and 12) that neither bundled font happens to
+// use - reaching those would mean hand-building synthetic TTF files, which would test the fixtures
+// more than the code. What the bundled fonts do exercise is covered.
+def coveredPackages = ['su/knst/crypto/core/**']
+def coverageExclusions = ['su/knst/crypto/core/render/TrueTypeFont.class']
+
+def coreClasses = { ->
+    files(sourceSets.main.output.classesDirs.collect {
+        fileTree(dir: it, includes: coveredPackages, excludes: coverageExclusions)
+    })
+}
+
+jacocoTestReport {
+    dependsOn test
+
+    reports {
+        xml.required = true
+        html.required = true
+    }
+
+    classDirectories.setFrom(coreClasses())
+}
+
+tasks.register('coverageCheck', JacocoCoverageVerification) {
+    dependsOn jacocoTestReport
+    executionData tasks.named('test').get()
+    classDirectories.setFrom(coreClasses())
+
+    violationRules {
+        rule {
+            // The gap to 100% is defensive branches that cannot be reached without breaking the
+            // JRE underneath the code: catch blocks for a missing SHA-256, for IOException from an
+            // in-memory stream, and for renderer failures that the inputs above them rule out.
+            limit {
+                counter = 'INSTRUCTION'
+                minimum = 0.97
+            }
+            limit {
+                counter = 'BRANCH'
+                minimum = 0.94
+            }
+        }
+    }
+}
+
+check.dependsOn 'coverageCheck'
 
 def graalvmLauncher = javaToolchains.launcherFor {
     languageVersion.set(JavaLanguageVersion.of(25))

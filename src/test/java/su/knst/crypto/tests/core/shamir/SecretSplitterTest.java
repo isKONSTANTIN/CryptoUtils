@@ -57,6 +57,13 @@ class SecretSplitterTest {
     }
 
     @Test
+    void everySplitterReportsTheSchemeItWorksTo() {
+        assertEquals(SplitScheme.of(5, 3), SecretSplitter.shamir(SplitScheme.of(5, 3)).scheme());
+        assertEquals(SplitScheme.single(), SecretSplitter.single().scheme());
+        assertEquals(SplitScheme.of(4, 2), SecretSplitter.reprint(2, SplitScheme.of(4, 2)).scheme());
+    }
+
+    @Test
     void shamirRejectsANonSplitScheme() {
         assertThrows(IllegalArgumentException.class, () -> SecretSplitter.shamir(SplitScheme.single()));
     }
