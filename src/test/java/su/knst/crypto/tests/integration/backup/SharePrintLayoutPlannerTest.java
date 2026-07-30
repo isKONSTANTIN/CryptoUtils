@@ -211,9 +211,11 @@ class SharePrintLayoutPlannerTest {
         int cardWidth = 992; // real rendered card width (496 nominal design px * 2x supersample)
         PageConfig a4 = PageConfig.a4FittingCardWidth(cardWidth);
 
-        assertEquals(0, a4.portraitWidthPx() % cardWidth);
-        assertEquals(5, a4.portraitWidthPx() / cardWidth);
-        assertEquals(7, a4.landscapeWidthPx() / cardWidth);
+        // page size is derived from the card's rendered width treated as 56mm (not its true 42mm
+        // design width, see PageConfig.a4FittingCardWidth), so a row fits 210/56 = 3.75 card widths
+        // and a column fits 297/56 ~= 5.30 card widths.
+        assertEquals(3720, a4.portraitWidthPx());
+        assertEquals(5261, a4.landscapeWidthPx());
 
         List<PrintPage> plan = SharePrintLayoutPlanner.plan(
                 List.of(image(992, 1200), image(992, 1200)), a4);
