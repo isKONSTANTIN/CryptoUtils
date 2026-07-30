@@ -1,12 +1,7 @@
-package su.knst.crypto.tests.integration.qr;
+package su.knst.crypto.tests.core.render;
 
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import su.knst.crypto.Main;
-import su.knst.crypto.command.CommandResult;
-import su.knst.crypto.command.ParamsContainer;
-import su.knst.crypto.command.commands.qr.CodeCommand;
-import su.knst.crypto.tests.util.QuietStderr;
+import su.knst.crypto.core.render.QrCodec;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -46,17 +41,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * {@code python3 tools/generate_qr_photo_fixtures.py src/test/resources/qr_photo_fixtures 100 &&
  * python3 tools/split_fixtures_by_opencv.py}
  */
-class QrPhotoFixtureScanTest {
+class QrCodecFixtureScanTest {
 
     static final Path READABLE_FIXTURES_DIR = Path.of("src/test/resources/qr_photo_fixtures");
     static final Path HARD_FIXTURES_DIR = Path.of("src/test/resources/qr_photo_fixtures_hard");
-
-    static Main main;
-
-    @BeforeAll
-    static void setUp() {
-        main = new Main(); // don't start because user terminal not needed
-    }
 
     @Test
     void scanConfirmedReadableFixtures() throws IOException {
@@ -93,8 +81,6 @@ class QrPhotoFixtureScanTest {
 
         assertFalse(fixtures.isEmpty(), "no fixture files found in " + dir.toAbsolutePath());
 
-        CodeCommand command = main.getHandler().getCommand("qr", CodeCommand.class).orElseThrow();
-
         List<String> failures = new ArrayList<>();
         int ok = 0;
 
@@ -102,12 +88,12 @@ class QrPhotoFixtureScanTest {
             String fileName = fixture.getFileName().toString();
             String expectedPayload = fileName.substring(0, fileName.lastIndexOf('.'));
 
-            CommandResult result = QuietStderr.run(() -> command.run(new ParamsContainer("scan", fixture.toString())));
+            String decoded = QrCodec.decode(fixture);
 
-            if (!result.error() && expectedPayload.equals(result.message())) {
+            if (expectedPayload.equals(decoded)) {
                 ok++;
             } else {
-                failures.add(fileName + " -> " + (result.error() ? result.message() : "decoded mismatch: '" + result.message() + "'"));
+                failures.add(fileName + " -> " + (decoded == null ? "no code found" : "decoded mismatch: '" + decoded + "'"));
             }
         }
 

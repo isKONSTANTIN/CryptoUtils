@@ -4,14 +4,14 @@ package su.knst.crypto.utils.worldlists;
 import java.util.*;
 
 public class WordLists {
+    public static final String DEFAULT_LIST = "bip39_english";
+
     protected static final HashMap<String, WordList> lists = new HashMap<>();
     protected static WordList activeList;
 
+    /** Loads the default list up front so the first seed operation doesn't pay for it. */
     public static void preload() {
-        if (activeList != null)
-            return;
-
-        setActiveList("bip39_english");
+        getActiveList();
     }
 
     public static WordList setActiveList(String name) {
@@ -23,7 +23,15 @@ public class WordLists {
         return activeList;
     }
 
+    /**
+     * Falls back to the default list rather than returning null: callers convert seed phrases, and
+     * having to remember to prime this first would make every one of them a step away from a
+     * NullPointerException.
+     */
     public static WordList getActiveList() {
+        if (activeList == null)
+            setActiveList(DEFAULT_LIST);
+
         return activeList;
     }
 

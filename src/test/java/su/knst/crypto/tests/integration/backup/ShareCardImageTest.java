@@ -17,7 +17,7 @@ import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.core.render.CardImage;
 import su.knst.crypto.core.render.PngWriter;
 import su.knst.crypto.core.render.PrintGeometry;
-import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
+import su.knst.crypto.core.render.QrCodec;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -106,7 +106,7 @@ class ShareCardImageTest {
             BufferedImage image = CardImage.build(data(hex));
             ImageIO.write(image, "png", IMAGE_PATH.toFile());
 
-            decoded = new SimpleQRCodeWorker().readCode(IMAGE_PATH.toString());
+            decoded = QrCodec.decode(IMAGE_PATH);
             attempt++;
         } while (attempt < 10 && !Objects.equals(hex, decoded));
 
@@ -136,7 +136,7 @@ class ShareCardImageTest {
             BufferedImage image = CardImage.build(data(hex, checksum, true));
             ImageIO.write(image, "png", IMAGE_PATH.toFile());
 
-            decodedHex = new SimpleQRCodeWorker().readCode(IMAGE_PATH.toString());
+            decodedHex = QrCodec.decode(IMAGE_PATH);
             decodedChecksum = decodeCode128(IMAGE_PATH);
             attempt++;
         } while (attempt < 10 && (!Objects.equals(hex, decodedHex) || !Objects.equals(checksum, decodedChecksum)));
@@ -198,7 +198,7 @@ class ShareCardImageTest {
         assertTrue(withoutQr.getHeight() < withQr.getHeight());
 
         ImageIO.write(withoutQr, "png", IMAGE_PATH.toFile());
-        assertNull(new SimpleQRCodeWorker().readCode(IMAGE_PATH.toString()));
+        assertNull(QrCodec.decode(IMAGE_PATH));
     }
 
     @Test

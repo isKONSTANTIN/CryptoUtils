@@ -12,9 +12,15 @@ import su.knst.crypto.command.commands.misc.HelpCommand;
 
 import java.nio.file.Path;
 
+import java.util.Set;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class MiscCommandsTest {
+
+    // v2 deliberately ships a small command set: everything else was folded into these or dropped.
+    static final Set<String> EXPECTED_ALIASES =
+            Set.of("help", "exit", "q", "cd", "delete", "seed", "backup", "restore");
 
     static Main main;
 
@@ -30,10 +36,14 @@ class MiscCommandsTest {
         CommandResult result = command.run(new ParamsContainer());
 
         assertFalse(result.error());
-        assertTrue(result.message().contains("hex "));
-        assertTrue(result.message().contains("shamir "));
-        assertTrue(result.message().contains("rsa_key "));
-        assertTrue(result.message().contains("ecdhe_key "));
+
+        for (String alias : EXPECTED_ALIASES)
+            assertTrue(result.message().contains(alias), "help must list '" + alias + "'");
+    }
+
+    @Test
+    void exactlyTheExpectedCommandsAreRegistered() {
+        assertEquals(EXPECTED_ALIASES, main.getHandler().getCommands().keySet());
     }
 
     @Test

@@ -5,20 +5,11 @@ import su.knst.crypto.command.CommandResult;
 import su.knst.crypto.command.commands.CommandTag;
 import su.knst.crypto.command.commands.backup.BackupCreateCommand;
 import su.knst.crypto.command.commands.backup.BackupRestoreCommand;
-import su.knst.crypto.command.commands.backup.CardCommand;
-import su.knst.crypto.command.commands.backup.LabelCommand;
 import su.knst.crypto.command.commands.misc.ChangeDirectoryCommand;
 import su.knst.crypto.command.commands.misc.DeleteCommand;
 import su.knst.crypto.command.commands.misc.ExitCommand;
 import su.knst.crypto.command.commands.misc.HelpCommand;
-import su.knst.crypto.command.commands.hex.HexCommand;
-import su.knst.crypto.command.commands.keys.ECDHEKeyGeneratorCommand;
-import su.knst.crypto.command.commands.keys.RSAKeyGeneratorCommand;
-import su.knst.crypto.command.commands.qr.CodeCommand;
-import su.knst.crypto.command.commands.seed.*;
-import su.knst.crypto.command.commands.shamir.ShamirCommand;
-import su.knst.crypto.utils.codes.SimplePDF417Worker;
-import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
+import su.knst.crypto.command.commands.seed.SeedCommand;
 import su.knst.crypto.utils.NativeAwtLibraries;
 import su.knst.crypto.utils.worldlists.WordLists;
 
@@ -41,38 +32,20 @@ public class Main {
 
         handler.addTagManually(CommandTag.MISC);
         handler.addTagManually(CommandTag.CRYPTOCURRENCIES);
-        handler.addTagManually(CommandTag.CRYPTOGRAPHY);
         handler.addTagManually(CommandTag.BACKUPS);
 
         ExitCommand exitCommand = new ExitCommand();
 
         handler.registerCommand("help", new HelpCommand());
         handler.registerCommand("exit", exitCommand);
+        handler.registerCommand("q", exitCommand);
         handler.registerCommand("cd", new ChangeDirectoryCommand());
         handler.registerCommand("delete", new DeleteCommand());
-        handler.registerCommand("q", exitCommand);
 
-        handler.registerCommand("seed", new SeedGeneratorCommand());
-        handler.registerCommand("seed_to_base", new SeedToBaseCommand());
-        handler.registerCommand("seed_to_hex", new SeedToHexCommand());
-        handler.registerCommand("hex_to_seed", new HexToSeedCommand());
-        handler.registerCommand("extend_seed", new SeedExtenderCommand());
-        handler.registerCommand("wordlist", new WordListCommand());
-
-        handler.registerCommand("rsa_key", new RSAKeyGeneratorCommand());
-        handler.registerCommand("ecdhe_key", new ECDHEKeyGeneratorCommand());
-        handler.registerCommand("seed_rsa_cipher", new SeedRSACipherCommand());
-        handler.registerCommand("seed_ecdhe_cipher", new SeedECDHECipherCommand());
-
-        handler.registerCommand("qr", new CodeCommand(new SimpleQRCodeWorker()));
-        handler.registerCommand("pdf417", new CodeCommand(new SimplePDF417Worker()));
-        handler.registerCommand("shamir", new ShamirCommand());
-        handler.registerCommand("hex", new HexCommand());
+        handler.registerCommand("seed", new SeedCommand());
 
         handler.registerCommand("backup", new BackupCreateCommand());
         handler.registerCommand("restore", new BackupRestoreCommand());
-        handler.registerCommand("card", new CardCommand());
-        handler.registerCommand("label", new LabelCommand());
 
         terminalWorker = new TerminalWorker(handler);
     }

@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 import su.knst.crypto.core.render.PngWriter;
 import su.knst.crypto.core.render.PrintGeometry;
-import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
+import su.knst.crypto.core.render.QrCodec;
 import su.knst.crypto.core.render.TagImage;
 
 import javax.imageio.ImageIO;
@@ -98,7 +98,7 @@ class TagImageTest {
         BufferedImage image = TagImage.build(data("My Container", "ab12cd"));
         ImageIO.write(image, "png", IMAGE_PATH.toFile());
 
-        assertNull(new SimpleQRCodeWorker().readCode(IMAGE_PATH.toString()));
+        assertNull(QrCodec.decode(IMAGE_PATH));
     }
 
     @Test

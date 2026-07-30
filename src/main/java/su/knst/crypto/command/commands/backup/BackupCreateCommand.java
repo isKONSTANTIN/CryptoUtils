@@ -27,7 +27,13 @@ public class BackupCreateCommand extends Command {
     private static final List<Prompts.Choice> TYPE_CHOICES = List.of(
             new Prompts.Choice("file", "File", "Read the secret from a file on disk"),
             new Prompts.Choice("text", "Text", "Type the secret in directly"),
-            new Prompts.Choice("seed", "Seed", "Split a BIP-39 mnemonic phrase")
+            new Prompts.Choice("seed", "Seed", "Back up a BIP-39 mnemonic phrase"),
+            new Prompts.Choice("hex", "Hex", "Reprint a card for a share you already hold")
+    );
+
+    private static final List<Prompts.Choice> SPLIT_CHOICES = List.of(
+            new Prompts.Choice("split", "Shamir split", "N cards, any K of which restore the secret"),
+            new Prompts.Choice("single", "Single card", "One card holding the whole secret, no split")
     );
 
     @Override
@@ -60,34 +66,78 @@ public class BackupCreateCommand extends Command {
         Optional<String> oTagName = in.string("Name for the container tags? (empty to skip printing tags)");
         String tagName = (oTagName.isPresent() && !oTagName.get().equalsIgnoreCase("null")) ? oTagName.get() : null;
 
-        Optional<Integer> oAllParts = in.integer("Total number of parts (N)?");
-
-        if (oAllParts.isEmpty())
-            return CommandResult.error("No input");
-
-        Optional<Integer> oForRecover = in.integer("Parts required to recover (K)?");
-
-        if (oForRecover.isEmpty())
-            return CommandResult.error("No input");
-
         if (!isKnownType(oType.get()))
             return CommandResult.error("Unknown type");
+
+        Optional<SecretSplitter> oSplitter;
+
+        try {
+            oSplitter = askSplitter(in, oType.get());
+        } catch (IllegalArgumentException e) {
+            return CommandResult.error(e.getMessage());
+        }
+
+        if (oSplitter.isEmpty())
+            return CommandResult.error("No input");
 
         Optional<SecretSource> oSource = askSource(in, oType.get());
 
         if (oSource.isEmpty())
             return CommandResult.error("No input");
 
-        SplitScheme scheme;
-
-        try {
-            scheme = SplitScheme.of(oAllParts.get(), oForRecover.get());
-        } catch (IllegalArgumentException e) {
-            return CommandResult.error(e.getMessage());
-        }
-
-        return create(new BackupRequest(oName.get(), tagName, SecretSplitter.shamir(scheme),
+        return create(new BackupRequest(oName.get(), tagName, oSplitter.get(),
                 oSource.get(), Main.getCurrentPath()));
+    }
+
+    /**
+     * Which splitter to use is the only thing that differs between a Shamir backup, a whole-secret
+     * card and a reprint - everything downstream is the same pipeline.
+     */
+    private Optional<SecretSplitter> askSplitter(ArgSource in, String type) {
+        // a hex payload is an existing share by definition, so it is always a reprint: asking
+        // whether to split it further would produce a card that no longer matches its siblings
+        if (type.equals("hex"))
+            return askReprintSplitter(in);
+
+        Optional<String> oMode = in.choice("Split the secret into parts?", SPLIT_CHOICES);
+
+        if (oMode.isEmpty())
+            return Optional.empty();
+
+        if (oMode.get().equals("single"))
+            return Optional.of(SecretSplitter.single());
+
+        Optional<Integer> oAllParts = in.integer("Total number of parts (N)?");
+
+        if (oAllParts.isEmpty())
+            return Optional.empty();
+
+        Optional<Integer> oForRecover = in.integer("Parts required to recover (K)?");
+
+        if (oForRecover.isEmpty())
+            return Optional.empty();
+
+        return Optional.of(SecretSplitter.shamir(SplitScheme.of(oAllParts.get(), oForRecover.get())));
+    }
+
+    private Optional<SecretSplitter> askReprintSplitter(ArgSource in) {
+        Optional<Integer> oShareIndex = in.integer("Which share is this card for?");
+
+        if (oShareIndex.isEmpty())
+            return Optional.empty();
+
+        Optional<Integer> oAllParts = in.integer("Total number of parts (N)?");
+
+        if (oAllParts.isEmpty())
+            return Optional.empty();
+
+        Optional<Integer> oForRecover = in.integer("Parts required to recover (K)?");
+
+        if (oForRecover.isEmpty())
+            return Optional.empty();
+
+        return Optional.of(SecretSplitter.reprint(
+                oShareIndex.get(), new SplitScheme(oAllParts.get(), oForRecover.get())));
     }
 
     private static boolean isKnownType(String type) {
@@ -99,6 +149,7 @@ public class BackupCreateCommand extends Command {
             case "file" -> in.existingFilePath("Path to file?").map(SecretSource::ofFile);
             case "text" -> in.restOfLine("Enter text to backup:").map(SecretSource::ofText);
             case "seed" -> in.words("Enter seed words separated by spaces:").map(SecretSource::ofSeed);
+            case "hex" -> in.string("Enter the share's hex payload:").map(hex -> SecretSource.ofHex(hex.trim()));
             default -> Optional.empty();
         };
     }
@@ -118,8 +169,10 @@ public class BackupCreateCommand extends Command {
     private static CommandResult format(BackupResult result) {
         CommandResultBuilder builder = CommandResultBuilder.builder();
 
-        builder.line("Backup created: " + result.scheme().total() + " parts, "
-                        + result.scheme().threshold() + " required to recover")
+        builder.line(result.scheme().isSplit()
+                        ? "Backup created: " + result.scheme().total() + " parts, "
+                                + result.scheme().threshold() + " required to recover"
+                        : "Backup created: a single card holding the whole secret")
                 .line("Type: " + result.type().label())
                 .line(result.hasQr()
                         ? "QR error correction level: " + QrCodec.describeLevel(result.appliedLevel())
@@ -149,12 +202,13 @@ public class BackupCreateCommand extends Command {
 
     @Override
     public String description() {
-        return "Split a file, text or seed phrase into Shamir shares and print each as a labeled QR code";
+        return "Print a file, text or seed phrase onto scannable backup cards - split into Shamir "
+                + "shares, whole on a single card, or reprinting a card for a share you already hold";
     }
 
     @Override
     public String args() {
-        return "file|text|seed <name> <tag_name|null> <all_parts> <parts_for_recover> <source...>";
+        return "file|text|seed|hex <name> <tag_name|null> <split|single> [<all_parts> <parts_for_recover>] <source...>";
     }
 
     @Override

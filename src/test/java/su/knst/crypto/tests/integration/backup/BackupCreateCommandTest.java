@@ -11,7 +11,7 @@ import su.knst.crypto.command.commands.backup.BackupCreateCommand;
 import su.knst.crypto.tests.util.BackupTestFiles;
 import su.knst.crypto.utils.HexUtils;
 import su.knst.crypto.utils.MnemonicUtils;
-import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
+import su.knst.crypto.core.render.QrCodec;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -51,7 +51,7 @@ class BackupCreateCommandTest {
 
     private byte[] decodeChunk(String name, int index) throws Exception {
         Path path = Path.of(name + "_" + index + ".png");
-        String hex = new SimpleQRCodeWorker().readCode(path.toString());
+        String hex = QrCodec.decode(path);
         return HexUtils.hexStringToByteArray(hex);
     }
 
@@ -84,7 +84,7 @@ class BackupCreateCommandTest {
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
-        CommandResult result = command.run(new ParamsContainer("file", name, "null", String.valueOf(n), String.valueOf(k), source.toString()));
+        CommandResult result = command.run(new ParamsContainer("file", name, "null", "split", String.valueOf(n), String.valueOf(k), source.toString()));
 
         assertFalse(result.error(), result.message());
         filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
@@ -108,7 +108,7 @@ class BackupCreateCommandTest {
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("text", name, "null", String.valueOf(n), String.valueOf(k)));
+        List<String> args = new ArrayList<>(List.of("text", name, "null", "split", String.valueOf(n), String.valueOf(k)));
         args.addAll(List.of(text.split(" ")));
 
         CommandResult result = command.run(new ParamsContainer(args));
@@ -137,7 +137,7 @@ class BackupCreateCommandTest {
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("seed", name, "null", String.valueOf(n), String.valueOf(k)));
+        List<String> args = new ArrayList<>(List.of("seed", name, "null", "split", String.valueOf(n), String.valueOf(k)));
         args.addAll(List.of(words));
 
         CommandResult result = command.run(new ParamsContainer(args));
@@ -154,7 +154,7 @@ class BackupCreateCommandTest {
     void tooFewPartsForRecoverIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer("text", "bad_k", "null", "5", "1", "hello"));
+        CommandResult result = command.run(new ParamsContainer("text", "bad_k", "null", "split", "5", "1", "hello"));
 
         assertTrue(result.error());
         assertFalse(Path.of("bad_k_1.png").toFile().exists());
@@ -164,7 +164,7 @@ class BackupCreateCommandTest {
     void allPartsLessThanRequiredIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer("text", "bad_n", "null", "2", "3", "hello"));
+        CommandResult result = command.run(new ParamsContainer("text", "bad_n", "null", "split", "2", "3", "hello"));
 
         assertTrue(result.error());
         assertFalse(Path.of("bad_n_1.png").toFile().exists());
@@ -174,7 +174,7 @@ class BackupCreateCommandTest {
     void wordNotInDictionaryIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("seed", "bad_seed", "null", "5", "3"));
+        List<String> args = new ArrayList<>(List.of("seed", "bad_seed", "null", "split", "5", "3"));
         for (int i = 0; i < 11; i++)
             args.add("abandon");
         args.add("notarealbip39word");
@@ -201,7 +201,7 @@ class BackupCreateCommandTest {
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
-        CommandResult result = command.run(new ParamsContainer("file", name, "null", String.valueOf(n), String.valueOf(k), source.toString()));
+        CommandResult result = command.run(new ParamsContainer("file", name, "null", "split", String.valueOf(n), String.valueOf(k), source.toString()));
 
         assertFalse(result.error(), result.message());
         filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
@@ -210,7 +210,7 @@ class BackupCreateCommandTest {
             Path path = Path.of(name + "_" + i + ".png");
 
             assertTrue(path.toFile().isFile());
-            assertNull(new SimpleQRCodeWorker().readCode(path.toString()));
+            assertNull(QrCodec.decode(path));
         }
     }
 
@@ -218,7 +218,7 @@ class BackupCreateCommandTest {
     void missingSourceIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer("file", "no_source", "null", "3", "2", "this_file_does_not_exist_hopefully"));
+        CommandResult result = command.run(new ParamsContainer("file", "no_source", "null", "split", "3", "2", "this_file_does_not_exist_hopefully"));
 
         assertTrue(result.error());
     }
@@ -227,7 +227,7 @@ class BackupCreateCommandTest {
     void unknownTypeIsError() {
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        CommandResult result = command.run(new ParamsContainer("unknown", "name", "3", "2", "hello"));
+        CommandResult result = command.run(new ParamsContainer("unknown", "name", "null", "split", "3", "2", "hello"));
 
         assertTrue(result.error());
     }
@@ -246,7 +246,7 @@ class BackupCreateCommandTest {
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("text", name, tagName, String.valueOf(n), String.valueOf(k)));
+        List<String> args = new ArrayList<>(List.of("text", name, tagName, "split", String.valueOf(n), String.valueOf(k)));
         args.addAll(List.of(text.split(" ")));
 
         CommandResult result = command.run(new ParamsContainer(args));
@@ -271,7 +271,7 @@ class BackupCreateCommandTest {
 
         BackupCreateCommand command = main.getHandler().getCommand(BackupCreateCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("text", name, "null", String.valueOf(n), String.valueOf(k)));
+        List<String> args = new ArrayList<>(List.of("text", name, "null", "split", String.valueOf(n), String.valueOf(k)));
         args.addAll(List.of(text.split(" ")));
 
         CommandResult result = command.run(new ParamsContainer(args));

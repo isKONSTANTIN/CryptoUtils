@@ -62,14 +62,14 @@ class BackupWorkflowE2ETest {
         for (int i = 1; i <= n; i++)
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
-        CommandResult createResult = create.run(new ParamsContainer("file", name, "null", String.valueOf(n), String.valueOf(k), source.toString()));
+        CommandResult createResult = create.run(new ParamsContainer("file", name, "null", "split", String.valueOf(n), String.valueOf(k), source.toString()));
         assertFalse(createResult.error(), createResult.message());
         filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
         Path output = Path.of("e2e_backup_file_restored");
         filesToCleanUp.add(output);
 
-        List<String> args = new ArrayList<>(List.of("file", output.toString()));
+        List<String> args = new ArrayList<>(List.of("file", output.toString(), "shamir"));
         for (int i = 1; i <= n; i++)
             args.add(i <= k ? name + "_" + i + ".png" : "null");
 
@@ -91,7 +91,7 @@ class BackupWorkflowE2ETest {
         for (int i = 1; i <= n; i++)
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
-        List<String> createArgs = new ArrayList<>(List.of("text", name, "null", String.valueOf(n), String.valueOf(k)));
+        List<String> createArgs = new ArrayList<>(List.of("text", name, "null", "split", String.valueOf(n), String.valueOf(k)));
         createArgs.addAll(List.of(text.split(" ")));
 
         CommandResult createResult = create.run(new ParamsContainer(createArgs));
@@ -101,7 +101,7 @@ class BackupWorkflowE2ETest {
         List<Integer> indices = new ArrayList<>(List.of(1, 2, 3, 4));
         Collections.shuffle(indices, random);
 
-        List<String> restoreArgs = new ArrayList<>(List.of("text"));
+        List<String> restoreArgs = new ArrayList<>(List.of("text", "shamir"));
         for (int i = 1; i <= n; i++)
             restoreArgs.add(indices.subList(0, k).contains(i) ? name + "_" + i + ".png" : "null");
 
@@ -125,14 +125,14 @@ class BackupWorkflowE2ETest {
         for (int i = 1; i <= n; i++)
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
-        List<String> createArgs = new ArrayList<>(List.of("seed", name, "null", String.valueOf(n), String.valueOf(k)));
+        List<String> createArgs = new ArrayList<>(List.of("seed", name, "null", "split", String.valueOf(n), String.valueOf(k)));
         createArgs.addAll(List.of(words));
 
         CommandResult createResult = create.run(new ParamsContainer(createArgs));
         assertFalse(createResult.error(), createResult.message());
         filesToCleanUp.addAll(BackupTestFiles.printSheetPaths(name));
 
-        List<String> restoreArgs = new ArrayList<>(List.of("seed"));
+        List<String> restoreArgs = new ArrayList<>(List.of("seed", "shamir"));
         for (int i = 1; i <= n; i++)
             restoreArgs.add(i > n - k ? name + "_" + i + ".png" : "null");
 

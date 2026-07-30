@@ -9,7 +9,7 @@ import su.knst.crypto.command.InteractiveArgSource;
 import su.knst.crypto.command.ParamsContainer;
 import su.knst.crypto.command.ScriptedArgSource;
 import su.knst.crypto.command.commands.CommandTag;
-import su.knst.crypto.command.commands.seed.SeedGeneratorCommand;
+import su.knst.crypto.cli.format.SeedFormat;
 import su.knst.crypto.core.restore.RestoreException;
 import su.knst.crypto.core.restore.RestoreMode;
 import su.knst.crypto.core.restore.RestoreRequest;
@@ -28,6 +28,11 @@ public class BackupRestoreCommand extends Command {
             new Prompts.Choice("file", "File", "Restore into a file on disk"),
             new Prompts.Choice("text", "Text", "Restore into plain text"),
             new Prompts.Choice("seed", "Seed", "Restore a BIP-39 mnemonic phrase")
+    );
+
+    private static final List<Prompts.Choice> MODE_CHOICES = List.of(
+            new Prompts.Choice("shamir", "Shamir shares", "Combine several cards, numbered as they were printed"),
+            new Prompts.Choice("whole", "Whole backup", "One card holding the entire secret, never split")
     );
 
     @Override
@@ -50,12 +55,26 @@ public class BackupRestoreCommand extends Command {
         if (oSink.isEmpty())
             return CommandResult.error(isKnownType(oType.get()) ? "No input" : "Unknown type");
 
-        Optional<List<ShareInput>> oChunks = askChunks(in);
+        // The QR payload is plain hex with no header, so a lone card could be either a Shamir share
+        // or an unsplit backup. Rather than guess from the bytes, ask.
+        Optional<String> oMode = in.choice("What is on the cards?", MODE_CHOICES);
+
+        if (oMode.isEmpty())
+            return CommandResult.error("No input");
+
+        RestoreMode mode = oMode.get().equals("whole") ? RestoreMode.WHOLE : RestoreMode.SHAMIR;
+
+        Optional<List<ShareInput>> oChunks = mode == RestoreMode.WHOLE ? askSingleChunk(in) : askChunks(in);
 
         if (oChunks.isEmpty())
             return CommandResult.error("No input");
 
-        return restore(new RestoreRequest(oSink.get(), RestoreMode.SHAMIR, oChunks.get()));
+        return restore(new RestoreRequest(oSink.get(), mode, oChunks.get()));
+    }
+
+    private Optional<List<ShareInput>> askSingleChunk(ArgSource in) {
+        return in.stringWithFileCompletion("Card image path or hex string:")
+                .map(token -> List.of(toShareInput(token)));
     }
 
     private static boolean isKnownType(String type) {
@@ -124,7 +143,7 @@ public class BackupRestoreCommand extends Command {
         if (written.words() != null)
             return CommandResultBuilder.builder()
                     .line("Recovered seed:")
-                    .line(SeedGeneratorCommand.formatMnemonic(written.words()))
+                    .line(SeedFormat.formatMnemonic(written.words()))
                     .build();
 
         return CommandResult.of(written.text());
@@ -132,12 +151,13 @@ public class BackupRestoreCommand extends Command {
 
     @Override
     public String description() {
-        return "Reconstruct a file, text or seed phrase from Shamir shares recovered from QR codes or manually entered hex";
+        return "Reconstruct a file, text or seed phrase from backup cards - Shamir shares combined by "
+                + "their printed numbering, or a single unsplit card - read from QR codes or typed-in hex";
     }
 
     @Override
     public String args() {
-        return "file <output_path> <chunk_1|null> ... | text <chunk_1|null> ... | seed <chunk_1|null> ...";
+        return "file <output_path> <shamir|whole> <chunk_1|null> ... | text <shamir|whole> ... | seed <shamir|whole> ...";
     }
 
     @Override

@@ -10,7 +10,7 @@ import su.knst.crypto.command.commands.backup.BackupCreateCommand;
 import su.knst.crypto.command.commands.backup.BackupRestoreCommand;
 import su.knst.crypto.tests.util.BackupTestFiles;
 import su.knst.crypto.utils.MnemonicUtils;
-import su.knst.crypto.utils.codes.SimpleQRCodeWorker;
+import su.knst.crypto.core.render.QrCodec;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -45,7 +45,7 @@ class BackupRestoreCommandTest {
         for (int i = 1; i <= n; i++)
             filesToCleanUp.add(Path.of(name + "_" + i + ".png"));
 
-        List<String> args = new ArrayList<>(List.of(type, name, "null", String.valueOf(n), String.valueOf(k)));
+        List<String> args = new ArrayList<>(List.of(type, name, "null", "split", String.valueOf(n), String.valueOf(k)));
         args.addAll(source);
 
         CommandResult result = createCommand.run(new ParamsContainer(args));
@@ -70,7 +70,7 @@ class BackupRestoreCommandTest {
             String pngPath = name + "_" + i + ".png";
 
             if (hexSlots.contains(i))
-                tokens.add(new SimpleQRCodeWorker().readCode(pngPath));
+                tokens.add(QrCodec.decode(Path.of(pngPath)));
             else
                 tokens.add(pngPath);
         }
@@ -99,7 +99,7 @@ class BackupRestoreCommandTest {
 
         BackupRestoreCommand restoreCommand = main.getHandler().getCommand(BackupRestoreCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("file", output.toString()));
+        List<String> args = new ArrayList<>(List.of("file", output.toString(), "shamir"));
         args.addAll(tokens);
 
         CommandResult result = restoreCommand.run(new ParamsContainer(args));
@@ -121,7 +121,7 @@ class BackupRestoreCommandTest {
         for (List<Integer> chosen : List.of(List.of(1, 2, 3), List.of(2, 4, 5), List.of(1, 3, 5))) {
             List<String> tokens = chunkArgs(name, n, chosen, List.of(chosen.get(0)));
 
-            List<String> args = new ArrayList<>(List.of("text"));
+            List<String> args = new ArrayList<>(List.of("text", "shamir"));
             args.addAll(tokens);
 
             CommandResult result = restoreCommand.run(new ParamsContainer(args));
@@ -146,7 +146,7 @@ class BackupRestoreCommandTest {
 
         BackupRestoreCommand restoreCommand = main.getHandler().getCommand(BackupRestoreCommand.class).orElseThrow();
 
-        List<String> args = new ArrayList<>(List.of("seed"));
+        List<String> args = new ArrayList<>(List.of("seed", "shamir"));
         args.addAll(tokens);
 
         CommandResult result = restoreCommand.run(new ParamsContainer(args));
@@ -161,7 +161,7 @@ class BackupRestoreCommandTest {
     void invalidHexStringIsError() {
         BackupRestoreCommand restoreCommand = main.getHandler().getCommand(BackupRestoreCommand.class).orElseThrow();
 
-        CommandResult result = restoreCommand.run(new ParamsContainer("text", "not-valid-hex", "null", "null"));
+        CommandResult result = restoreCommand.run(new ParamsContainer("text", "shamir", "not-valid-hex", "null", "null"));
 
         assertTrue(result.error());
     }
@@ -170,7 +170,7 @@ class BackupRestoreCommandTest {
     void noChunksProvidedIsError() {
         BackupRestoreCommand restoreCommand = main.getHandler().getCommand(BackupRestoreCommand.class).orElseThrow();
 
-        CommandResult result = restoreCommand.run(new ParamsContainer("text", "null", "null", "null"));
+        CommandResult result = restoreCommand.run(new ParamsContainer("text", "shamir", "null", "null", "null"));
 
         assertTrue(result.error());
     }
@@ -188,7 +188,7 @@ class BackupRestoreCommandTest {
     void unknownTypeIsError() {
         BackupRestoreCommand restoreCommand = main.getHandler().getCommand(BackupRestoreCommand.class).orElseThrow();
 
-        CommandResult result = restoreCommand.run(new ParamsContainer("unknown", "aabbcc"));
+        CommandResult result = restoreCommand.run(new ParamsContainer("unknown", "shamir", "aabbcc"));
 
         assertTrue(result.error());
     }

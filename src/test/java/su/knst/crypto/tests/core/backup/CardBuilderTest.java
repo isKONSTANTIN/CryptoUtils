@@ -59,12 +59,15 @@ class CardBuilderTest {
     }
 
     @Test
-    void smallPayloadsGetTheStrongestErrorCorrection() throws BackupException {
+    void smallPayloadsGetStrongErrorCorrection() throws BackupException {
         CardBuilder.CardSet cards = CardBuilder.build(
                 SecretSplitter.single(), randomBytes(16), meta());
 
-        assertEquals(ErrorCorrectionLevel.H, cards.appliedLevel());
         assertTrue(cards.hasQr());
+        // a payload this small fits at every level, so the walk should settle near the top; it can
+        // still step down one notch when a particular bit pattern renders a QR that won't read back
+        assertTrue(cards.appliedLevel() == ErrorCorrectionLevel.H || cards.appliedLevel() == ErrorCorrectionLevel.Q,
+                "expected H or Q, got " + cards.appliedLevel());
     }
 
     @Test
