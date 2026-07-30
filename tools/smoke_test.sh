@@ -552,7 +552,7 @@ expect_file "big_1.hex"
 expect_file "big_2.hex"
 expect_owner_only "big_1.hex"
 
-section "restore that oversized backup from its .hex files"
+section "a share is pasted as hex, not named as a file"
 run <<'EOF'
 restore
 file
@@ -563,7 +563,7 @@ big_1.hex
 big_2.hex
 exit
 EOF
-# a .hex file is a path, so it is read as a card image and rejected - hex is typed in, not loaded
+# an answer that names a file is a card image to scan; the .hex file is there to copy out of
 expect_output "Chunk 1"
 
 section "reprint a lost card from a share's known hex"

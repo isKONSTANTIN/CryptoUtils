@@ -98,7 +98,7 @@ Note the empty answer for chunk #2: a share's number is where it sits in this li
 - **Single card** — one card holding the whole secret, no split. Restore it with the *whole* mode.
 - **Reprint** — a card was lost or damaged, but you wrote its hex down. Feed the hex back with source type `hex`, tell it which share number the card is for, and you get a replacement that combines with its siblings byte for byte.
 
-If a secret is too large to fit a QR code at any error-correction level, the cards are still produced with the hex block alone, and the same hex is written next to them as a `.hex` file — retyping several kilobytes by hand is not a recovery plan.
+If a secret is too large to fit a QR code at any error-correction level, the cards are still produced with the hex block alone, and the same hex is written next to them as a `.hex` file — retyping several kilobytes by hand is not a recovery plan. Restore takes that hex pasted in as an answer: an answer naming a file is always a card image to scan, so open the `.hex` file and copy what is in it.
 
 ## Shamir's Secret Sharing
 
