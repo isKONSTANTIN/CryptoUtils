@@ -109,8 +109,13 @@ public class TerminalWorker implements Questioner {
     public void start() throws IOException {
         //Logger.getLogger("org.jline").setLevel(Level.ALL);
 
+        // dumb(true) makes a non-interactive stdin - a piped transcript, a CI container with no
+        // TERM - fall back to a plain terminal quietly instead of logging a warning at the user.
+        // Commands still read their answers line by line, which is what lets the built binary be
+        // smoke-tested end to end.
         terminal = TerminalBuilder.builder()
                 .jansi(true)
+                .dumb(true)
                 .build();
         LineReader reader = LineReaderBuilder.builder()
                 .terminal(terminal)

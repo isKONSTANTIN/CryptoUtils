@@ -197,6 +197,12 @@ Requires a JVM 17+ (any platform).
 ./gradlew check   # tests plus the coverage gate on su.knst.crypto.core
 ```
 
+Tests run classes on a JVM classpath, which says nothing about the binary that actually ships. `tools/smoke_test.sh` drives a built CryptoUtils through a full backup and restore by feeding its prompts on stdin, and CI runs it against both the jar and each native binary:
+
+```
+tools/smoke_test.sh build/native/nativeCompile/cryptoutils
+```
+
 The build runs on JDK 17. Gradle 8.14 supports JDK 24 and below, so if your default JDK is newer, point the daemon at an older one — for example in a git-ignored `gradle.properties`:
 
 ```
