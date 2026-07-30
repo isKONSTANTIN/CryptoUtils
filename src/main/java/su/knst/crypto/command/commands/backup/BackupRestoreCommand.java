@@ -104,6 +104,14 @@ public class BackupRestoreCommand extends Command {
         return Optional.of(chunks);
     }
 
+    /** Paths are echoed back the way the user typed them, not as the absolute form resolved here. */
+    private static String relativeToCurrentPath(Path path) {
+        Path current = Main.getCurrentPath().toAbsolutePath().normalize();
+        Path target = path.toAbsolutePath().normalize();
+
+        return target.startsWith(current) ? current.relativize(target).toString() : target.toString();
+    }
+
     /** A token naming an existing file is a card to scan; anything else is hex read off one by eye. */
     private static ShareInput toShareInput(String token) {
         if (token.equalsIgnoreCase("null"))
@@ -124,7 +132,7 @@ public class BackupRestoreCommand extends Command {
         }
 
         if (written.file() != null)
-            return CommandResult.of("Restored file written to " + written.file());
+            return CommandResult.of("Restored file written to " + relativeToCurrentPath(written.file()));
 
         if (written.words() != null)
             return CommandResultBuilder.builder()

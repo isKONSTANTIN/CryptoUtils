@@ -12,7 +12,7 @@
 # pass VERSION and PKG_ARCH (deb arch: amd64/arm64):
 #   docker buildx build -f docker/native-build.Dockerfile \
 #       --target package-export \
-#       --build-arg VERSION=1.0.0 --build-arg PKG_ARCH=amd64 \
+#       --build-arg VERSION=2.0.0 --build-arg PKG_ARCH=amd64 \
 #       --output type=local,dest=out .
 # Produces out/cryptoutils_<version>_<arch>.deb and out/cryptoutils-<version>-1.<rpmarch>.rpm
 

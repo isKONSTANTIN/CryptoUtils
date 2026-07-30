@@ -29,8 +29,6 @@ dependencies {
     testImplementation(platform('org.junit:junit-bom:5.9.2'))
     testImplementation('org.junit.jupiter:junit-jupiter')
 
-    include group: 'org.bouncycastle', name: 'bcprov-jdk18on', version: '1.80'
-
     include group: 'com.google.zxing', name: 'core', version: '3.3.0'
     include group: 'com.google.zxing', name: 'javase', version: '3.3.0'
 
@@ -226,9 +224,7 @@ tasks.register('copyNativeAwtLibs', Copy) {
 jar {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 
-    from(configurations.include.collect { it.isDirectory() ? it : zipTree(it) }) {
-        exclude 'META-INF/BC**'
-    }
+    from(configurations.include.collect { it.isDirectory() ? it : zipTree(it) })
 
     manifest {
         attributes 'Main-Class': mainClassName,
