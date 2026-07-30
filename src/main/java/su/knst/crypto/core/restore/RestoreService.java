@@ -23,7 +23,12 @@ public final class RestoreService {
         };
 
         try {
-            return request.sink().write(GzipCodec.decompress(secret));
+            // the mirror of BackupService: whether the payload was compressed on the way in is a
+            // property of what kind of secret it is, and the user names that when picking the sink
+            if (request.sink().type().compressed())
+                secret = GzipCodec.decompress(secret);
+
+            return request.sink().write(secret);
         } catch (SecretException e) {
             throw new RestoreException(e.getMessage(), e);
         }

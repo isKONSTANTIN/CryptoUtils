@@ -124,11 +124,6 @@ class CardBuilderTest {
             public boolean randomized() {
                 return false;
             }
-
-            @Override
-            public boolean compress() {
-                return true;
-            }
         };
 
         CardBuilder.CardSet cards = CardBuilder.build(counting, randomBytes(16), meta());

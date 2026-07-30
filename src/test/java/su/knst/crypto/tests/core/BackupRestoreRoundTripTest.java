@@ -114,6 +114,20 @@ class BackupRestoreRoundTripTest {
     }
 
     @Test
+    void aSeedCardCarriesItsEntropyUncompressed() throws Exception {
+        byte[] entropy = SeedService.randomEntropy(32);
+        String[] mnemonic = SeedService.fromEntropy(entropy);
+
+        BackupResult result = backup("roundtrip_seed_raw", SecretSplitter.single(), SecretSource.ofSeed(mnemonic));
+
+        // compression is a property of the secret's type, not of how it was split: a seed card
+        // carries the entropy itself, so what is on the QR is exactly those bytes as hex
+        String payload = QrCodec.decode(result.cardFiles().get(0));
+
+        assertEquals(HexUtils.bytesToHex(entropy), payload);
+    }
+
+    @Test
     void anUnsplitSeedBackupComesBackAsTheSamePhrase() throws Exception {
         String[] mnemonic = SeedService.fromEntropy(SeedService.randomEntropy(32));
 

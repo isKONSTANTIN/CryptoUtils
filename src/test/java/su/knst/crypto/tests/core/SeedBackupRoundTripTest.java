@@ -3,7 +3,7 @@ package su.knst.crypto.tests.core;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
-import su.knst.crypto.core.secret.GzipCodec;
+import su.knst.crypto.core.secret.SecretType;
 import su.knst.crypto.core.seed.SeedService;
 import su.knst.crypto.core.shamir.SecretJoiner;
 import su.knst.crypto.core.shamir.SecretSplitter;
@@ -23,9 +23,9 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * The whole seed-backup pipeline end to end, module by module:
  * <p>
- * entropy -&gt; mnemonic -&gt; back to entropy -&gt; gzip -&gt; Shamir split -&gt; hex payload as printed
- * on a card -&gt; back from hex -&gt; join from many different subsets of shares -&gt; gunzip -&gt;
- * mnemonic again, verifying every step round-trips to exactly the same data.
+ * entropy -&gt; mnemonic -&gt; back to entropy -&gt; Shamir split -&gt; hex payload as printed on a card
+ * -&gt; back from hex -&gt; join from many different subsets of shares -&gt; mnemonic again, verifying
+ * every step round-trips to exactly the same data.
  * <p>
  * Runs across both entropy sizes and several Shamir schemes, and for each split joins from several
  * random subsets of the required size, so recovery cannot depend on which particular shares survive.
@@ -61,9 +61,10 @@ class SeedBackupRoundTripTest {
         // 2. the phrase typed back in reproduces exactly the entropy it came from
         assertArrayEquals(sourceEntropy, SeedService.toEntropy(mnemonic));
 
-        // 3. compress and split, as `backup` does
-        byte[] compressed = GzipCodec.compress(sourceEntropy);
-        ShareSet shares = SecretSplitter.shamir(SplitScheme.of(allParts, forRecover)).split(compressed);
+        // 3. split, as `backup` does - entropy is not compressed on the way onto a card, since
+        // 16 or 32 bytes of it are already as dense as they get and gzip would only add a header
+        assertFalse(SecretType.SEED.compressed());
+        ShareSet shares = SecretSplitter.shamir(SplitScheme.of(allParts, forRecover)).split(sourceEntropy);
 
         assertEquals(allParts, shares.size());
 
@@ -80,8 +81,7 @@ class SeedBackupRoundTripTest {
             List<Share> subset = new ArrayList<>(fromCards);
             Collections.shuffle(subset, RANDOM);
 
-            byte[] joined = SecretJoiner.join(subset.subList(0, forRecover));
-            byte[] recovered = GzipCodec.decompress(joined);
+            byte[] recovered = SecretJoiner.join(subset.subList(0, forRecover));
 
             assertArrayEquals(sourceEntropy, recovered);
             assertArrayEquals(mnemonic, SeedService.fromEntropy(recovered));
@@ -94,13 +94,13 @@ class SeedBackupRoundTripTest {
         if (forRecover < 2 || allParts == forRecover && forRecover == 2)
             return;
 
-        byte[] compressed = GzipCodec.compress(SeedService.randomEntropy(entropySize));
-        ShareSet shares = SecretSplitter.shamir(SplitScheme.of(allParts, forRecover)).split(compressed);
+        byte[] entropy = SeedService.randomEntropy(entropySize);
+        ShareSet shares = SecretSplitter.shamir(SplitScheme.of(allParts, forRecover)).split(entropy);
 
         List<Share> tooFew = new ArrayList<>(shares.shares()).subList(0, forRecover - 1);
         byte[] joined = SecretJoiner.join(tooFew);
 
-        assertFalse(java.util.Arrays.equals(compressed, joined),
+        assertFalse(java.util.Arrays.equals(entropy, joined),
                 "fewer than K shares must not reconstruct the secret");
     }
 }

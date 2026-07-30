@@ -39,9 +39,4 @@ final class ShamirSplitter implements SecretSplitter {
     public boolean randomized() {
         return true;
     }
-
-    @Override
-    public boolean compress() {
-        return true;
-    }
 }

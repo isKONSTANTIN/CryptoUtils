@@ -18,9 +18,4 @@ final class SingleShareSplitter implements SecretSplitter {
     public boolean randomized() {
         return false;
     }
-
-    @Override
-    public boolean compress() {
-        return true;
-    }
 }

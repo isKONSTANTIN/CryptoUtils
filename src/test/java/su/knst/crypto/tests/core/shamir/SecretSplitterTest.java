@@ -48,11 +48,12 @@ class SecretSplitterTest {
     }
 
     @Test
-    void shamirSplitIsRandomizedAndCompressible() {
-        SecretSplitter splitter = SecretSplitter.shamir(SplitScheme.of(3, 2));
-
-        assertTrue(splitter.randomized());
-        assertTrue(splitter.compress());
+    void onlyAShamirSplitIsRandomized() {
+        // a fresh polynomial every call is what makes re-splitting worth trying after a card
+        // failed to decode back; the other two have fixed output, so a retry would be pointless
+        assertTrue(SecretSplitter.shamir(SplitScheme.of(3, 2)).randomized());
+        assertFalse(SecretSplitter.single().randomized());
+        assertFalse(SecretSplitter.reprint(1, SplitScheme.of(3, 2)).randomized());
     }
 
     @Test
@@ -70,12 +71,10 @@ class SecretSplitterTest {
         assertEquals(1, shares.size());
         assertEquals(1, shares.get(1).index());
         assertArrayEquals(secret, shares.get(1).data());
-        assertFalse(splitter.randomized());
-        assertTrue(splitter.compress());
     }
 
     @Test
-    void reprintKeepsTheIndexAndSkipsCompression() {
+    void reprintKeepsTheIndexAndPayload() {
         byte[] payload = new byte[32];
         RANDOM.nextBytes(payload);
 
@@ -86,9 +85,6 @@ class SecretSplitterTest {
         assertEquals(3, shares.get(3).index());
         assertArrayEquals(payload, shares.get(3).data());
         assertEquals(5, shares.scheme().total());
-        assertFalse(splitter.randomized());
-        // compressing an existing share's bytes would stop the reprinted card combining with its siblings
-        assertFalse(splitter.compress());
     }
 
     @Test

@@ -2,6 +2,7 @@ package su.knst.crypto.core.backup;
 
 import su.knst.crypto.core.secret.GzipCodec;
 import su.knst.crypto.core.secret.SecretException;
+import su.knst.crypto.core.secret.SecretType;
 import su.knst.crypto.core.shamir.SecretSplitter;
 
 import java.awt.image.BufferedImage;
@@ -10,11 +11,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Composes the whole backup: read the secret, compress it, split it, render and verify the cards,
- * render the tags, write everything out, then lay out print sheets.
+ * Composes the whole backup: read the secret, compress it if its type calls for that, split it,
+ * render and verify the cards, render the tags, write everything out, then lay out print sheets.
  *
  * Whether the secret is Shamir-split, printed whole on one card, or reprinted for an existing share
- * is entirely a property of the {@link SecretSplitter} that comes in - the steps do not branch.
+ * is entirely a property of the {@link SecretSplitter} that comes in; whether it is compressed is
+ * entirely a property of its {@link SecretType}. Neither makes the steps branch.
  */
 public final class BackupService {
     public BackupResult create(BackupRequest request) throws BackupException {
@@ -30,16 +32,17 @@ public final class BackupService {
             throw new BackupException("Source data is empty");
 
         SecretSplitter splitter = request.splitter();
+        SecretType type = request.source().type();
         byte[] secret;
 
         try {
-            secret = splitter.compress() ? GzipCodec.compress(payload) : payload;
+            secret = type.compressed() ? GzipCodec.compress(payload) : payload;
         } catch (SecretException e) {
             throw new BackupException(e.getMessage(), e);
         }
 
         CardBuilder.CardSet cards = CardBuilder.build(splitter, secret, new CardBuilder.CardMeta(
-                request.name(), request.source().type(), LocalDate.now()));
+                request.name(), type, LocalDate.now()));
 
         List<BufferedImage> tags = request.tagName() == null
                 ? List.of()
@@ -55,7 +58,7 @@ public final class BackupService {
         return new BackupResult(
                 request.name(),
                 cards.shares().scheme(),
-                request.source().type(),
+                type,
                 cards.appliedLevel(),
                 cards.hasQr(),
                 written.cardFiles(),

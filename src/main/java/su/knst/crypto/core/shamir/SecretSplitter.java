@@ -18,9 +18,6 @@ public interface SecretSplitter {
      */
     boolean randomized();
 
-    /** False when the payload must reach the card byte-for-byte, with no compression applied. */
-    boolean compress();
-
     static SecretSplitter shamir(SplitScheme scheme) {
         return new ShamirSplitter(scheme);
     }

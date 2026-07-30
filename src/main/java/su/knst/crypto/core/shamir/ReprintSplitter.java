@@ -29,11 +29,4 @@ final class ReprintSplitter implements SecretSplitter {
     public boolean randomized() {
         return false;
     }
-
-    @Override
-    public boolean compress() {
-        // the payload is an existing share's bytes; compressing them would make the reprinted card
-        // fail to combine with the siblings it was printed to replace
-        return false;
-    }
 }
